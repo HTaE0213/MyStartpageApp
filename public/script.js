@@ -977,11 +977,12 @@ async function fetchSuggestions(query, engine) {
 
   if (useProxy) {
     console.log("[fetchSuggestions] Entering useProxy block");
-    if (!SUGGEST_PROXY_URL || SUGGEST_PROXY_URL.includes("your-proxy-name")) {
-      console.error("SUGGEST_PROXY_URL is not configured.");
-      displaySuggestions([]);
-      return;
-    }
+    // ★★★ SUGGEST_PROXY_URL のチェックを削除 ★★★
+    // if (!SUGGEST_PROXY_URL || SUGGEST_PROXY_URL.includes('your-proxy-name')) {
+    //    console.error("SUGGEST_PROXY_URL is not configured.");
+    //    displaySuggestions([]);
+    //    return;
+    // }
 
     const targetApiUrl = PROXY_TARGET_URLS[engine];
     if (!targetApiUrl) {
@@ -995,12 +996,13 @@ async function fetchSuggestions(query, engine) {
 
     const encodedQuery = encodeURIComponent(query);
     const encodedTargetUrl = encodeURIComponent(targetApiUrl);
+    // ★ proxyUrl は相対パスのまま
     const proxyUrl = `/suggest?engine=${engine}&q=${encodedQuery}&target_url=${encodedTargetUrl}`;
 
     console.log(`[fetchSuggestions] Fetching via proxy: ${proxyUrl}`);
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 25000);
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // タイムアウトを5秒に短縮 (任意)
 
       const response = await fetch(proxyUrl, { signal: controller.signal });
       clearTimeout(timeoutId);
@@ -1012,16 +1014,18 @@ async function fetchSuggestions(query, engine) {
         console.error(
           `[fetchSuggestions] Proxy request failed: ${response.status} ${response.statusText}`
         );
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = await response.json().catch(() => ({})); // エラー内容取得試行
         console.error("[fetchSuggestions] Proxy error details:", errorData);
-        tryFallbackToJsonp(query, engine, "Proxy response not OK");
+        // ★ JSONPフォールバックは method 4 では不要になる可能性が高い
+        // tryFallbackToJsonp(query, engine, 'Proxy response not OK');
+        displaySuggestions([]); // エラー時は候補をクリア
         return;
       }
       const data = await response.json();
       console.log(
         `[fetchSuggestions] Received proxy data for ${engine}, calling processSuggestionData...`
       );
-      processSuggestionData(data, engine, query);
+      processSuggestionData(data, engine, query); // ★ dataを渡す
     } catch (error) {
       if (error.name === "AbortError") {
         console.error(
@@ -1033,11 +1037,15 @@ async function fetchSuggestions(query, engine) {
           error
         );
       }
-      tryFallbackToJsonp(query, engine, error.name || "Fetch error");
+      // ★ JSONPフォールバックは method 4 では不要になる可能性が高い
+      // tryFallbackToJsonp(query, engine, error.name || 'Fetch error');
+      displaySuggestions([]); // エラー時は候補をクリア
     } finally {
       console.log("[fetchSuggestions] Exiting useProxy block");
     }
   } else if (jsonpUrl) {
+    // ★ JSONP処理も method 4 では不要になる可能性が高い (プロキシ経由に統一できるため)
+    //    もし残すなら、この部分はそのまま
     console.log(
       "[fetchSuggestions] Using JSONP directly (no proxy configured)"
     );
