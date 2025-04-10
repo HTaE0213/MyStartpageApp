@@ -1,0 +1,1309 @@
+:root {
+  --primary-color: #888888;
+  /* グレー系に変更済み */
+  --primary-dark: #555555;
+  /* グレー系に変更済み */
+  --bg-color: #f5f5f5;
+  --container-bg: white;
+  --text-color: #333;
+  --text-secondary: #666;
+  --border-color: #ddd;
+  --highlight-color: #f0f0f0;
+  --shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --transition: all 0.3s ease;
+  --mobile-font-size: 14px;
+  --icon-size-small: 16px;
+  --icon-size-medium: 18px;
+  --icon-size-large: 20px;
+  --primary-color-alpha: rgba(136, 136, 136, 0.3);
+  /* グレー系の半透明 */
+}
+
+html {
+  background-color: var(--bg-color);
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  margin: 0;
+  padding: 10px;
+  transition: var(--transition);
+  overflow: hidden;
+  /* 基本スクロール禁止 */
+}
+
+.container {
+  background-color: var(--container-bg);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 5px 15px 15px 15px;
+  /* ★ 上パディング調整済み */
+  width: 100%;
+  position: relative;
+  transition: var(--transition);
+  margin: 0 auto;
+  flex-grow: 1;
+  height: calc(100vh - 20px);
+  /* 画面高さに合わせる */
+  overflow-y: auto;
+  /* コンテナ内のみスクロール許可 */
+}
+
+/* ★ 日付・時刻表示のスタイル */
+.datetime-display {
+  font-size: 1.4em;
+  color: var(--text-secondary);
+  text-align: center;
+  /* margin-bottom: 15px; */
+  /* ★ 削除済み */
+  min-height: 1.2em;
+  padding-bottom: 0px;
+  /* ★ 隙間を狭くする (例: 5px) */
+  font-variant-numeric: tabular-nums;
+}
+
+.search-form {
+  position: relative;
+  margin-bottom: 15px;
+}
+
+.search-input-container {
+  /* position: relative; は削除しても良いかも */
+  display: flex;
+  align-items: stretch;
+  /* ★ 高さを揃える */
+  margin-top: 10px;
+  border: 1px solid var(--border-color);
+  /* ★ コンテナ自体に枠線をつける */
+  border-radius: 8px;
+  /* ★ コンテナに角丸 */
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  background-color: var(--container-bg);
+  /* ★ 背景色を設定 (入力欄と合わせる) */
+  position: relative;
+  /* ★ ボタンの absolute 配置の基準にする */
+}
+
+/* ★ フォーカス時にコンテナの枠線を変更 */
+.search-input-container:focus-within {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--primary-color-alpha, rgba(136, 136, 136, 0.3));
+  /* フォーカスリング風 */
+}
+
+/* ★ フォールバック時にコンテナの枠線を変更 */
+.search-input-container.fallback-active {
+  border-color: #e53935;
+  /* 強い赤色 */
+  box-shadow: 0 0 0 2px rgba(229, 57, 53, 0.3);
+}
+
+/* ★ エンジン表示部分のスタイル変更 ★★★ */
+.current-engine-display {
+  /* position: absolute 関係を削除 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  /* ★ 少し幅を広げる */
+  /* height は align-items: stretch で自動調整される */
+  background-color: var(--highlight-color);
+  /* ★ 背景色を少し変える */
+  border-radius: 7px 0 0 7px;
+  /* ★ 左側の角丸のみ */
+  cursor: pointer;
+  padding: 0 4px;
+  transition: background-color 0.2s;
+  border-right: 1px solid var(--border-color);
+  /* ★ 区切り線は維持 */
+  flex-shrink: 0;
+  /* ★ 縮まないように */
+}
+
+.current-engine-display:hover,
+.current-engine-display:focus {
+  background-color: #e0e0e0;
+  /* ホバー時の色を調整 */
+  outline: none;
+}
+
+.current-engine-icon {
+  width: 20px;
+  /* アイコンサイズ */
+  height: 20px;
+  object-fit: contain;
+  border-radius: 3px;
+}
+
+.current-engine-initial {
+  width: 20px;
+  height: 20px;
+  background-color: var(--primary-color);
+  color: white;
+  display: flex;
+  /* display: none はJSで制御 */
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  /* 少し角丸に */
+  font-size: 0.8em;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+/* .current-engine-name { // 名前を表示する場合
+        font-size: 0.8em;
+        margin-left: 4px;
+        color: var(--text-secondary);
+    } */
+
+/* ★ エンジン選択メニューのスタイル */
+.engine-select-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  /* ★ コンテナの下に表示 */
+  left: 0;
+  /* ★ コンテナの左端に合わせる */
+  background-color: var(--container-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  z-index: 11;
+  max-height: 40vh;
+  overflow-y: auto;
+  min-width: 180px;
+  padding: 4px 0;
+  /* display: none; はJSで制御 */
+}
+
+.engine-select-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 0.9em;
+  gap: 8px;
+  /* アイコンと名前の間隔 */
+}
+
+.engine-select-item:hover,
+.engine-select-item:focus {
+  background-color: var(--highlight-color);
+  outline: none;
+}
+
+.engine-select-item img,
+.engine-select-item .initial-icon {
+  width: 18px;
+  /* メニュー内アイコンサイズ */
+  height: 18px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  /* 縮まないように */
+}
+
+.engine-select-item .initial-icon {
+  font-size: 0.7em;
+  margin-bottom: 0;
+  /* スピードダイアル用スタイル打ち消し */
+}
+
+.engine-select-item span {
+  /* エンジン名 */
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ★ 検索入力欄の左パディングを調整して、エンジン表示とかぶらないように */
+.search-input {
+  padding-left: 48px;
+  /* 左側にスペースを確保 */
+}
+
+.search-input {
+  flex-grow: 1;
+  padding: 10px 115px 10px 12px;
+  /* ★ 右パディング調整 (ボタン3つ分想定) */
+  font-size: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease,
+    outline-color 0.3s ease;
+  /* ★ outline-color も transition 対象に */
+  outline: 2px solid transparent;
+  /* ★ 通常時は透明なアウトラインを用意 */
+  outline-offset: 2px;
+  /* ★ アウトラインを少し外側に */
+}
+
+/* ★ 通常のフォーカス時のスタイル (青色のアウトライン) */
+.search-input:focus {
+  border-color: var(--primary-color);
+  /* フォーカス時にボーダー色も変える (任意) */
+  outline-color: var(--primary-color);
+  /* ★ 通常フォーカスは設定した色 (例: グレー系) */
+}
+
+/* ★ フォールバック時に検索ボックスのアウトラインを変更するスタイル */
+.search-input.fallback-active {
+  outline-color: #e53935;
+  /* ★ 強い赤色のアウトライン */
+}
+
+.button {
+  position: absolute;
+  /* ★ absolute 配置は維持 */
+  top: 0;
+  /* ★ top を 0 に */
+  height: 100%;
+  /* ★ 高さを 100% に */
+  transform: none;
+  /* ★ translateY(-50%) を削除 */
+  width: 36px;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 1;
+  /* ★ 入力欄よりは手前 */
+}
+
+.button svg {
+  width: var(--icon-size-medium);
+  height: var(--icon-size-medium);
+}
+
+/* ★ ボタン位置調整 (右から: アクション, ローマ字, クリア) */
+.button.action-button {
+  /* 旧 searchButton */
+  right: 5px;
+}
+
+.button.romaji-button {
+  right: 40px;
+  /* アクションボタンの左 */
+}
+
+.button.clear-button {
+  right: 75px;
+  /* ローマ字ボタンの左 */
+}
+
+/* pasteButton は削除 */
+
+.button:hover,
+.button:focus {
+  color: var(--primary-dark);
+}
+
+.button::-moz-focus-inner {
+  border: none;
+}
+
+.help-button {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  transition: var(--transition);
+  border: none;
+  padding: 0;
+}
+
+.help-button svg {
+  width: var(--icon-size-large);
+  height: var(--icon-size-large);
+}
+
+.mode-toggle {
+  position: fixed;
+  bottom: 10px;
+  right: 60px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  opacity: 0.6;
+  border: none;
+  padding: 0;
+}
+
+.mode-toggle svg {
+  width: var(--icon-size-medium);
+  height: var(--icon-size-medium);
+}
+
+.mode-toggle:hover {
+  opacity: 1;
+}
+
+.mode-toggle.active {
+  color: #ffcc00;
+}
+
+.help-content h2,
+.speed-dial-container h2 {
+  font-size: 1rem;
+  margin-bottom: 10px;
+  font-weight: bold;
+  color: var(--text-secondary);
+}
+
+.help-content .shortcut-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.help-content .shortcut-item {
+  padding: 6px 8px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.help-content .info {
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin-top: 10px;
+  text-align: left;
+}
+
+.suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: var(--container-bg);
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  max-height: 50vh;
+  overflow-y: auto;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: none;
+}
+
+.suggestion-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background-color 0.2s ease;
+  user-select: none;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-item:hover,
+.suggestion-item.selected {
+  background-color: var(--highlight-color);
+}
+
+.engine-indicator {
+  font-weight: bold;
+  color: var(--primary-color);
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.suggestion-text {
+  flex-grow: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arrow-button {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  cursor: pointer;
+  margin-left: 10px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.arrow-button svg {
+  width: var(--icon-size-small);
+  height: var(--icon-size-small);
+}
+
+.arrow-button:hover {
+  color: var(--primary-dark);
+}
+
+.speed-dial-container {
+  margin-top: 20px;
+}
+
+.grid-settings {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 12px;
+}
+
+.grid-settings label {
+  font-size: 0.9em;
+  color: var(--text-secondary);
+}
+
+#columns {
+  width: 50px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+#addSpeedDial,
+#manageEngines,
+.panel-button {
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  background-color: var(--container-bg);
+  color: var(--text-color);
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  justify-content: flex-start;
+  margin-bottom: 5px;
+  transition: var(--transition);
+  font-size: 0.9em;
+}
+
+#addSpeedDial:last-child,
+#manageEngines:last-child,
+.panel-button:last-child {
+  margin-bottom: 0;
+}
+
+#addSpeedDial:hover,
+#manageEngines:hover,
+.panel-button:hover {
+  background-color: var(--highlight-color);
+  border-color: var(--primary-color);
+}
+
+.speed-dial-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+}
+
+.speed-dial-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  text-decoration: none;
+  color: var(--text-color);
+  background-color: var(--container-bg);
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: var(--shadow);
+  transition: var(--transition);
+  position: relative;
+}
+
+.speed-dial-item:hover {
+  background-color: var(--highlight-color);
+  transform: translateY(-2px);
+}
+
+.speed-dial-item .speed-dial-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+  width: 100%;
+}
+
+.speed-dial-item img,
+.speed-dial-item .initial-icon {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 8px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.speed-dial-item span {
+  font-size: 0.8rem;
+  word-break: break-all;
+  line-height: 1.3;
+}
+
+.initial-icon {
+  width: 32px;
+  height: 32px;
+  background-color: var(--primary-color);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 1rem;
+  margin-bottom: 8px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.speed-dial-item-buttons {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: none;
+  gap: 3px;
+}
+
+body.edit-mode .speed-dial-item-buttons {
+  display: flex;
+}
+
+.speed-dial-item-button {
+  background: rgba(255, 255, 255, 0.8);
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  margin-left: 0;
+  opacity: 0.7;
+  transition: opacity 0.3s, background-color 0.3s;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.speed-dial-item-button svg {
+  width: var(--icon-size-small);
+  height: var(--icon-size-small);
+}
+
+.speed-dial-item-button:hover {
+  opacity: 1;
+  color: var(--primary-color);
+  background: white;
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1001;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.modal.visible {
+  display: block;
+  opacity: 1;
+}
+
+.modal-content {
+  background-color: var(--container-bg);
+  margin: 10% auto;
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  transform: scale(0.95);
+  transition: transform 0.3s ease;
+}
+
+.modal.visible .modal-content {
+  transform: scale(1);
+}
+
+.modal-content h2 {
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+.modal-content label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+
+.modal-content input[type="text"],
+.modal-content input[type="file"] {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 15px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.modal-content input[type="file"] {
+  padding: 4px;
+}
+
+.modal-buttons {
+  text-align: right;
+  margin-top: 15px;
+}
+
+.modal-buttons button {
+  margin-left: 10px;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: var(--primary-color);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.9em;
+}
+
+.modal-buttons button.cancel-button {
+  background-color: #ccc;
+  color: var(--text-color);
+}
+
+.modal-buttons button svg {
+  width: var(--icon-size-small);
+  height: var(--icon-size-small);
+}
+
+#engineModal .modal-content {
+  max-width: 600px;
+}
+
+#engineList {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 20px;
+}
+
+#engineList li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+#engineList li:last-child {
+  border-bottom: none;
+}
+
+.engine-info {
+  flex-grow: 1;
+  margin-right: 10px;
+  font-size: 0.9em;
+}
+
+.engine-nickname {
+  font-weight: bold;
+  margin-right: 5px;
+}
+
+.engine-actions button {
+  margin-left: 5px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: var(--primary-color);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.8em;
+}
+
+.engine-actions button.delete-button {
+  background-color: #ccc;
+  color: var(--text-color);
+}
+
+.engine-actions button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.help-content {
+  display: none;
+  position: fixed;
+  bottom: 60px;
+  right: 10px;
+  background: var(--container-bg);
+  color: var(--text-color);
+  border-radius: 8px;
+  padding: 15px;
+  width: 280px;
+  box-shadow: var(--shadow);
+  max-height: 70vh;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.help-visible .help-content {
+  display: block;
+}
+
+.speed-dial-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  position: relative;
+}
+
+.speed-dial-header h2 {
+  margin-bottom: 0;
+}
+
+.settings-area {
+  position: relative;
+}
+
+.icon-button {
+  background: none;
+  border: none;
+  padding: 5px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.icon-button:hover {
+  background-color: var(--highlight-color);
+  color: var(--text-color);
+}
+
+.icon-button svg {
+  width: var(--icon-size-medium);
+  height: var(--icon-size-medium);
+}
+
+.settings-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  background-color: var(--container-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  z-index: 10;
+  width: 220px;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.settings-panel.visible {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.panel-section {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.panel-section:first-child {
+  border-top: none;
+}
+
+.panel-section.grid-settings {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.panel-button svg {
+  width: var(--icon-size-small);
+  height: var(--icon-size-small);
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.panel-button:hover svg {
+  color: var(--primary-color);
+}
+
+.panel-divider {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 8px 0;
+}
+
+/* スピードダイアル ドラッグ＆ドロップ用スタイル */
+.speed-dial-item.dragging {
+  opacity: 0.5;
+  border: 2px dashed var(--primary-dark);
+}
+
+.speed-dial-item.drag-over-target {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.speed-dial-item:not([draggable="true"]) {
+  cursor: default;
+}
+
+@media (prefers-color-scheme: dark) {
+  .current-engine-display:hover,
+  .current-engine-display:focus {
+    background-color: #3d3d3d;
+  }
+
+  .engine-select-menu {
+    background-color: #2d2d2d;
+    border-color: #444;
+  }
+
+  .engine-select-item:hover,
+  .engine-select-item:focus {
+    background-color: #3d3d3d;
+  }
+
+  :root {
+    --bg-color: #121212;
+    --container-bg: #1e1e1e;
+    --text-color: #e0e0e0;
+    --text-secondary: #a0a0a0;
+    --border-color: #333;
+    --highlight-color: #2a2a42;
+    --primary-color-alpha: rgba(136, 136, 136, 0.4);
+    /* ダークモードでは少し濃く */
+  }
+
+  /* ★ ダークモード時の日付時計 */
+  .datetime-display {
+    color: var(--text-secondary);
+  }
+
+  .help-content .shortcut-item {
+    background-color: #252525;
+  }
+
+  /* ★ ダークモード時の通常フォーカス */
+  .search-input:focus {
+    border-color: var(--primary-color);
+    outline-color: var(--primary-color);
+  }
+
+  /* ★ ダークモード時のフォールバックアウトライン */
+  .search-input.fallback-active {
+    outline-color: #f44336;
+  }
+
+  .suggestions {
+    background-color: var(--container-bg);
+    border-color: #444;
+    color: var(--text-color);
+  }
+
+  .suggestion-item {
+    border-bottom-color: #444;
+  }
+
+  .suggestion-item:hover,
+  .suggestion-item.selected {
+    background-color: #3d3d3d;
+  }
+
+  .speed-dial-item {
+    background-color: #252525;
+  }
+
+  .speed-dial-item:hover {
+    background-color: #303030;
+  }
+
+  .modal-content {
+    background-color: #2d2d2d;
+    border-color: #444;
+  }
+
+  .modal-content input[type="text"],
+  .modal-content input[type="file"] {
+    background-color: #333;
+    color: #eee;
+    border-color: #555;
+  }
+
+  #columns {
+    background-color: #333;
+    color: #eee;
+    border-color: #555;
+  }
+
+  #addSpeedDial,
+  #manageEngines,
+  .panel-button {
+    background-color: #333;
+    color: #eee;
+    border-color: #555;
+  }
+
+  #addSpeedDial:hover,
+  #manageEngines:hover,
+  .panel-button:hover {
+    background-color: #444;
+    border-color: var(--primary-color);
+  }
+
+  .settings-panel {
+    background-color: #2d2d2d;
+    border-color: #444;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .panel-section {
+    border-top-color: #444;
+  }
+
+  .panel-divider {
+    border-top-color: #444;
+  }
+
+  .modal-buttons button.cancel-button {
+    background-color: #555;
+    color: #eee;
+  }
+
+  .engine-actions button.delete-button {
+    background-color: #555;
+    color: #eee;
+  }
+
+  .speed-dial-item-button {
+    background: rgba(30, 30, 30, 0.8);
+  }
+
+  .speed-dial-item-button:hover {
+    background: #1e1e1e;
+  }
+
+  .icon-adjustment-controls {
+    border-top-color: #444;
+  }
+
+  #resetAdjustmentButton {
+    background-color: #555;
+    color: #eee;
+  }
+
+  .add-button-item {
+    border-color: #444;
+    color: #888;
+  }
+
+  .add-button-item:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background-color: #303030;
+  }
+
+  .search-input-container {
+    background-color: #2d2d2d;
+    /* ★ コンテナ背景色 */
+    border-color: #444;
+  }
+
+  .search-input-container:focus-within {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-color-alpha, rgba(136, 136, 136, 0.3));
+  }
+
+  .search-input-container.fallback-active {
+    border-color: #f44336;
+    box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.3);
+  }
+
+  .current-engine-display {
+    background-color: #333;
+    /* ★ エンジン表示背景 */
+    border-right-color: #444;
+  }
+
+  .current-engine-display:hover,
+  .current-engine-display:focus {
+    background-color: #404040;
+  }
+
+  .search-input {
+    background-color: #2d2d2d;
+    color: #f5f5f5;
+    /* ★ 文字色 */
+    border-color: #444;
+    /* caret-color: #f5f5f5; */
+    /* カーソル色 (任意) */
+  }
+}
+
+@media (max-width: 600px) {
+  body {
+    padding: 5px;
+  }
+
+  .container {
+    height: calc(100vh - 10px);
+    padding: 5px 10px 10px 10px;
+    /* 上左右下 */
+  }
+
+  .datetime-display {
+    font-size: 1em;
+    padding-bottom: 8px;
+  }
+
+  .search-input {
+    padding: 8px 110px 8px 10px;
+    /* ★ 右パディング調整 */
+    font-size: 14px;
+  }
+
+  /* ★ スマホでのボタン位置調整 */
+  .button.action-button {
+    right: 2px;
+  }
+
+  .button.romaji-button {
+    right: 35px;
+    /* アクションボタンの左 */
+  }
+
+  .button.clear-button {
+    right: 70px;
+    /* ローマ字ボタンの左 */
+  }
+
+  .help-content .shortcut-list {
+    grid-template-columns: 1fr;
+  }
+
+  .suggestion-item {
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+
+  .modal-content {
+    margin: 5% auto;
+    width: 95%;
+  }
+
+  .help-button {
+    width: 36px;
+    height: 36px;
+    bottom: 5px;
+    right: 5px;
+  }
+
+  .mode-toggle {
+    width: 32px;
+    height: 32px;
+    bottom: 5px;
+    right: 48px;
+  }
+
+  .speed-dial-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  #columns {
+    width: 40px;
+  }
+
+  #addSpeedDial,
+  #manageEngines,
+  .panel-button {
+    background-color: #333;
+    color: #eee;
+    border-color: #555;
+  }
+
+  .current-engine-display {
+    width: 38px;
+    /* スマホでは少し狭く */
+  }
+
+  .search-input {
+    padding: 8px 110px 8px 10px;
+    /* ★ 左パディング調整、右はボタン分確保 */
+    font-size: 14px;
+  }
+}
+
+/* スピナーの簡単な例 */
+.spinner {
+  border: 4px solid rgba(var(--text-secondary-rgb), 0.1);
+  /* 薄い色の円 */
+  border-left-color: var(--text-primary);
+  /* 一部だけ濃い色 */
+  border-radius: 50%;
+  width: 24px;
+  /* アイコンプレビューのサイズに合わせる */
+  height: 24px;
+  animation: spin 1s linear infinite;
+  margin: auto;
+  /* 中央寄せ */
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ★ アイコン色調調整UIのスタイル */
+.icon-adjustment-controls {
+  font-size: 0.9em;
+}
+
+.adjustment-slider {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.adjustment-slider label {
+  width: 50px;
+  /* ラベル幅を固定 */
+  margin-bottom: 0;
+  /* デフォルトのmarginを打ち消し */
+  font-weight: normal;
+  /* 少し細字に */
+  font-size: 0.95em;
+}
+
+.adjustment-slider input[type="range"] {
+  flex-grow: 1;
+  height: 6px;
+  /* スライダーの高さを調整 */
+  cursor: pointer;
+  margin-bottom: 0;
+  /* デフォルトのmarginを打ち消し */
+}
+
+.adjustment-slider span {
+  width: 30px;
+  /* 数値表示幅を固定 */
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  /* 数字を等幅に */
+}
+
+/* ★ スピードダイアル追加ボタン(+)のスタイル */
+.add-button-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* アイコンを中央に */
+  text-align: center;
+  text-decoration: none;
+  color: var(--text-secondary);
+  /* やや薄い色 */
+  background-color: transparent;
+  /* 背景なし */
+  border: 2px dashed var(--border-color);
+  /* 点線枠 */
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: none;
+  /* 影なし */
+  transition: var(--transition);
+  cursor: pointer;
+  min-height: 90px;
+  /* 他のアイテムと高さを合わせる (要調整) */
+}
+
+.add-button-item:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background-color: var(--highlight-color);
+  transform: none;
+  /* ホバー時の浮き上がりはなし */
+}
+
+.add-button-item svg {
+  width: 28px;
+  /* アイコンサイズ調整 */
+  height: 28px;
+  margin-bottom: 5px;
+  /* アイコンとテキストの間隔 */
+}
+
+.add-button-item span {
+  font-size: 0.8rem;
+  line-height: 1.3;
+}

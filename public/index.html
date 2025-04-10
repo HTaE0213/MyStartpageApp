@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="複数の検索エンジンを簡単に切り替えられるシンプルなスタートページ" />
+    <!-- ★ viewport はどちらか一方で良い -->
+    <!-- <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" /> -->
+    <title>検索スタートページ</title>
+
+    <!-- ★ 外部CSSファイルを読み込む -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Feather Icons CDN -->
+    <script src="https://unpkg.com/feather-icons"></script>
+    <!-- wanakana CDN -->
+    <script src="https://unpkg.com/wanakana"></script>
+
+    <!-- ★ style タグは削除 -->
+</head>
+
+<body class="">
+    <button class="help-button" id="helpButton" aria-label="ヘルプ">
+        <i data-feather="info"></i>
+    </button>
+    <div class="help-content" id="helpContent">
+        <h3>検索ショートカット</h3>
+        <div class="shortcut-list"></div>
+        <p class="info">使用方法: ニックネーム + スペース + 検索語句</p>
+    </div>
+
+    <div class="container">
+        <!-- ★ 日付・時刻表示用の要素を追加 -->
+        <div id="datetime-display" class="datetime-display"></div>
+
+        <form class="search-form" id="searchForm">
+            <div class="search-input-container">
+                <!-- ★★★ エンジン表示/選択ボタン ★★★ -->
+                <div id="currentEngineDisplay" class="current-engine-display" tabindex="0" role="button"
+                    aria-haspopup="true" aria-expanded="false" title="検索エンジンを選択">
+                    <img id="currentEngineIcon" src="" alt="Engine Icon" class="current-engine-icon"
+                        style="display: none;">
+                    <span id="currentEngineInitial" class="current-engine-initial" style="display: none;">G</span>
+                    <!-- <span id="currentEngineName" class="current-engine-name">Google</span> --> <!-- 名前表示は任意 -->
+                </div>
+                <!-- ★★★ エンジン選択メニュー (初期非表示) ★★★ -->
+                <div id="engineSelectMenu" class="engine-select-menu" style="display: none;" role="listbox">
+                    <!-- JSでエンジン項目を追加 -->
+                </div>
+                <input type="text" id="searchInput" class="search-input" placeholder="検索語句を入力 (例: g cat videos)"
+                    autofocus autocomplete="off" aria-label="検索キーワード" />
+                <!-- ★ ローマ字変換ボタンを追加 -->
+                <button type="button" id="romajiButton" class="button romaji-button" title="ローマ字に変換"
+                    aria-label="ローマ字変換">
+                    <i data-feather="repeat"></i>
+                </button>
+                <!-- ★ クリアボタンを追加 (初期非表示) -->
+                <button type="button" id="clearButton" class="button clear-button" style="display: none;" title="入力をクリア"
+                    aria-label="クリア">
+                    <i data-feather="x"></i>
+                </button>
+                <!-- ★ アクションボタン (旧検索/貼り付けボタン) -->
+                <button type="button" id="actionButton" class="button action-button" aria-label="貼り付け">
+                    <i data-feather="clipboard"></i> <!-- 初期アイコン -->
+                </button>
+            </div>
+            <div id="suggestions" class="suggestions" role="listbox" aria-label="検索候補"></div>
+        </form>
+
+        <div class="speed-dial-container">
+            <div class="speed-dial-header">
+                <h2>スピードダイアル</h2>
+                <div class="settings-area">
+                    <button id="settingsButton" class="icon-button" aria-label="スピードダイアル設定">
+                        <i data-feather="settings"></i>
+                    </button>
+                    <div class="settings-panel" id="settingsPanel">
+                        <div class="panel-section grid-settings">
+                            <label for="columns">列数:</label>
+                            <input type="number" id="columns" value="4" min="1" max="15" />
+                        </div>
+                        <!-- ★ 項目を追加ボタンのセクションが削除された -->
+                        <div class="panel-section">
+                            <button id="manageEngines" class="panel-button">
+                                <i data-feather="tool"></i> エンジンを管理
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="speed-dial-grid" id="speedDialGrid">
+                <!-- JSでスピードダイアル項目を追加 -->
+            </div>
+        </div>
+
+        <!-- スピードダイアル編集モーダル -->
+        <div id="speedDialModal" class="modal">
+            <div class="modal-content">
+                <h2 id="modalTitle">スピードダイアル項目を追加</h2>
+                <label for="siteUrl">URL:</label>
+                <input type="text" id="siteUrl" placeholder="例: https://www.google.com" required />
+                <label for="siteName">サイト名:</label>
+                <input type="text" id="siteName" placeholder="例: Google" required />
+                <div style="margin-bottom: 15px">
+                    <label>アイコンプレビュー:</label>
+                    <div style="
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                min-height: 32px;
+              ">
+                        <img id="faviconPreview" src="" alt="Favicon Preview" style="
+                  width: 32px;
+                  height: 32px;
+                  display: none;
+                  border-radius: 4px;
+                " />
+                        <div id="initialIconPreview" class="initial-icon" style="display: none; margin-bottom: 0"></div>
+                        <button type="button" id="fetchFaviconButton" style="padding: 4px 8px; font-size: 0.8em">
+                            <i data-feather="download-cloud"
+                                style="width: 14px; height: 14px; margin-right: 3px"></i>URLから取得
+                        </button>
+                    </div>
+                </div>
+                <label for="siteIcon">または、ファイルを選択 (任意, 1MB以下):</label>
+                <input type="file" id="siteIcon" accept="image/*" />
+
+                <!-- ★★★ アイコン色調調整UI ★★★ -->
+                <div class="icon-adjustment-controls"
+                    style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                    <label style="margin-bottom: 10px;">アイコン色調調整 (画像のみ):</label>
+                    <div class="adjustment-slider">
+                        <label for="hueSlider">色相:</label>
+                        <input type="range" id="hueSlider" min="0" max="360" value="0" step="1">
+                        <span id="hueValue">0</span>°
+                    </div>
+                    <div class="adjustment-slider">
+                        <label for="saturateSlider">彩度:</label>
+                        <input type="range" id="saturateSlider" min="0" max="200" value="100" step="1">
+                        <span id="saturateValue">100</span>%
+                    </div>
+                    <div class="adjustment-slider">
+                        <label for="brightnessSlider">明るさ:</label>
+                        <input type="range" id="brightnessSlider" min="0" max="200" value="100" step="1">
+                        <span id="brightnessValue">100</span>%
+                    </div>
+                    <button type="button" id="resetAdjustmentButton"
+                        style="padding: 4px 8px; font-size: 0.8em; margin-top: 10px;">
+                        <i data-feather="rotate-ccw" style="width: 14px; height: 14px; margin-right: 3px;"></i>リセット
+                    </button>
+                </div>
+                <!-- ★★★ ここまで追加 ★★★ -->
+
+                <div class="modal-buttons">
+                    <button id="saveSpeedDial"><i data-feather="save"></i> 保存</button>
+                    <button type="button" id="cancelModal" class="cancel-button">
+                        <i data-feather="x"></i> キャンセル
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- エンジン管理モーダル -->
+        <div id="engineModal" class="modal">
+            <div class="modal-content">
+                <h2>検索エンジンを管理</h2>
+                <ul id="engineList"></ul>
+                <h3>新しいエンジンを追加/編集</h3>
+                <label for="engineNickname">ニックネーム:</label>
+                <input type="text" id="engineNickname" placeholder="例: g" required />
+                <label for="engineName">エンジン名:</label>
+                <input type="text" id="engineName" placeholder="例: Google" required />
+                <label for="engineUrl">検索URL (%s を検索語句に置換):</label>
+                <input type="text" id="engineUrl" placeholder="例: https://www.google.com/search?q=%s" required />
+                <label for="engineSuggestUrl">サジェストURL (オプション, JSON/JSONP):</label>
+                <input type="text" id="engineSuggestUrl"
+                    placeholder="例: https://suggestqueries.google.com/complete/search?client=firefox&q=" />
+                <!-- ★★★ アイコンURL入力欄を追加 ★★★ -->
+                <label for="engineIconUrl">アイコンURL (オプション):</label>
+                <input type="text" id="engineIconUrl" placeholder="例: https://example.com/favicon.ico" />
+                <div class="modal-buttons">
+                    <button id="addEngine">
+                        <i data-feather="plus"></i>
+                        <span class="button-text">エンジンを追加</span>
+                    </button>
+                    <button type="button" id="closeEngineModal" class="cancel-button">
+                        <i data-feather="x"></i> 閉じる
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ★ 外部JavaScriptファイルを読み込む (defer推奨) -->
+        <script src="script.js" defer></script>
+
+        <!-- ★ script タグは削除 -->
+</body>
+
+</html>
