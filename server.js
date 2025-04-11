@@ -1,61 +1,93 @@
 // server.js
 const express = require("express");
 const path = require("path");
-const cheerio = require("cheerio");
-// (後で他の必要なモジュールを追加: fetch, cheerio など)
+const cheerio = require("cheerio"); // ファビコン取得で使用
+// ★ Node.js v18未満で fetch を使う場合は node-fetch が必要
+// const fetch = require('node-fetch'); // Node.js v18未満の場合コメント解除
 
 const app = express();
-const port = process.env.PORT || 3000; // Renderが指定するPORT、なければ3000
+const port = process.env.PORT || 3000; // Render が指定するポート or ローカル用3000
 
-// --- ミドルウェア設定 ---
-// 静的ファイル (HTML/CSS/JS) を public フォルダから配信
+// --- ミドルウェア ---
+app.use(express.json()); // JSONボディパーサー (APIで必要なら)
+
+// --- 静的ファイルの配信 ---
+// publicフォルダの中身をルートURL ('/') からアクセスできるようにする
 app.use(express.static(path.join(__dirname, "public")));
-// JSONリクエストボディをパースするためのミドルウェア (今後必要なら)
-// app.use(express.json());
-// URLエンコードされたリクエストボディをパース (今後必要なら)
-// app.use(express.urlencoded({ extended: true }));
-// CORS設定 (同一オリジンになるので基本不要だが、念のためコメントアウトで残す)
-// const cors = require('cors');
-// app.use(cors());
 
-// --- API エンドポイント ---
+/**
+ * エンジンニックネームに対応するサジェストAPIのクエリパラメータ名を取得する
+ * @param {string} engineNickname - エンジンのニックネーム (例: 'g', 'w', 'b')
+ * @returns {string | null} クエリパラメータ名 (例: 'q', 'search'), 不明な場合は null
+ */
+function getQueryParamNameForEngine(engineNickname) {
+  switch (engineNickname) {
+    case "g":
+    case "gs":
+    case "y": // YouTube (Google API)
+    case "a": // Amazon
+    case "d": // DuckDuckGo
+      return "q";
+    case "b": // Bing
+      return "query";
+    case "w": // Wikipedia
+      return "search";
+    // 他のエンジンを追加する場合
+    // case 'some_other_engine':
+    //     return 'term';
+    default:
+      // 不明なエンジンや、パラメータ名が 'q' で良い場合
+      console.warn(
+        `[getQueryParamNameForEngine] Unknown engine nickname: ${engineNickname}. Assuming 'q'.`
+      );
+      return "q"; // デフォルトで 'q' を返すか、null を返すか選択
+  }
+}
 
-// サジェストAPI (/suggest)
+// --- APIエンドポイント ---
+
+// サジェスト取得API (/suggest)
+// サジェスト取得API (/suggest)
 app.get("/suggest", async (req, res) => {
   console.log("GET /suggest received:", req.query);
-  // ★★★ ここに既存のプロキシサーバーの /suggest ロジックを移植 ★★★
-  // req.query.engine, req.query.q, req.query.target_url を使う
-  // target_url の検証 (SSRF対策) を行う
   const { engine, q: query, target_url: targetUrl } = req.query;
 
-  if (!query || !targetUrl) {
+  // --- 1. パラメータ検証 ---
+  if (!query || !targetUrl || !engine) {
     return res
       .status(400)
-      .json({ error: "Missing required parameters (q, target_url)" });
+      .json({ error: "Missing required parameters: engine, q, target_url" });
   }
 
-  // --- 1. target_url の検証 (SSRF対策) ---
+  // --- 2. target_url (ベースURL) の検証 ---
+  let parsedUrl;
+  const allowedProtocols = ["http:", "https:"];
   const allowedDomains = [
     "suggestqueries.google.com",
+    "www.google.com",
     "api.bing.com",
     "duckduckgo.com",
-    "ja.wikipedia.org",
-    // 他に許可したいサジェストAPIのドメインがあれば追加
+    "ja.wikipedia.org", // Wikipedia (JA)
+    "completion.amazon.co.jp", // Amazon (JP)
+    // 他に許可したいドメインを追加
   ];
-  let parsedTargetUrl;
+
   try {
-    parsedTargetUrl = new URL(decodeURIComponent(targetUrl)); // デコードしてからパース
-    if (!allowedDomains.includes(parsedTargetUrl.hostname)) {
-      console.warn(
-        `[Suggest Proxy] Forbidden domain requested: ${parsedTargetUrl.hostname}`
-      );
-      throw new Error("Domain not allowed");
+    parsedUrl = new URL(targetUrl);
+    if (!allowedProtocols.includes(parsedUrl.protocol)) {
+      throw new Error("Invalid protocol");
     }
     if (
-      parsedTargetUrl.protocol !== "https:" &&
-      parsedTargetUrl.protocol !== "http:"
+      !allowedDomains.some(
+        (domain) =>
+          parsedUrl.hostname === domain ||
+          parsedUrl.hostname.endsWith("." + domain)
+      )
     ) {
-      throw new Error("Invalid protocol");
+      console.warn(
+        `[Suggest Proxy] Forbidden domain requested: ${parsedUrl.hostname}`
+      );
+      throw new Error("Forbidden domain");
     }
   } catch (error) {
     console.error(
@@ -66,140 +98,247 @@ app.get("/suggest", async (req, res) => {
     return res.status(400).json({ error: "Invalid or forbidden target URL" });
   }
 
-  // --- 2. 外部APIへのリクエスト構築 ---
-  const finalSuggestUrl = new URL(parsedTargetUrl.toString()); // URLオブジェクトをコピー
-  // クエリパラメータを追加 (エンジンによってパラメータ名が違う可能性に注意)
-  if (
-    parsedTargetUrl.hostname.includes("google.com") ||
-    parsedTargetUrl.hostname.includes("wikipedia.org")
-  ) {
-    finalSuggestUrl.searchParams.set("q", query); // Google, Wikipedia は 'q' か 'search'
-    if (parsedTargetUrl.hostname.includes("wikipedia.org"))
-      finalSuggestUrl.searchParams.set("search", query);
-  } else if (parsedTargetUrl.hostname.includes("bing.com")) {
-    finalSuggestUrl.searchParams.set("query", query); // Bing は 'query' かもしれない (要確認)
-    finalSuggestUrl.searchParams.set("q", query); // 'q' も試す
-  } else if (parsedTargetUrl.hostname.includes("duckduckgo.com")) {
-    finalSuggestUrl.searchParams.set("q", query); // DuckDuckGo は 'q'
-  } else {
-    // 不明なドメインの場合は 'q' を試す
-    finalSuggestUrl.searchParams.set("q", query);
-  }
-  // 必要に応じて他の固定パラメータを追加 (例: client=firefox)
-  // finalSuggestUrl.searchParams.set('client', 'firefox');
-
-  console.log(
-    `[Suggest Proxy] Forwarding request to: ${finalSuggestUrl.toString()}`
-  );
-
-  // --- 3. 外部APIへフェッチ ---
+  // --- 3. 外部APIへの最終リクエストURL構築 ---
+  let finalUrlString;
   try {
-    // ★ Node.js v18未満の場合は node-fetch を使う
-    // const fetch = (await import('node-fetch')).default;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒タイムアウト
+    // ★★★ エンジンに応じて適切なクエリパラメータ名を設定 ★★★
+    const queryParamName = getQueryParamNameForEngine(engine); // ヘルパー関数を想定
+    if (!queryParamName) {
+      console.warn(
+        `[Suggest Proxy] Query parameter name not defined for engine: ${engine}. Defaulting to 'q'.`
+      );
+      // デフォルトで 'q' を使うか、エラーにするか選択
+    }
+    parsedUrl.searchParams.set(queryParamName || "q", query); // 取得した名前 or 'q' を使う
+    finalUrlString = parsedUrl.toString();
 
-    const response = await fetch(finalSuggestUrl.toString(), {
+    console.log(`[Suggest Proxy] Forwarding request to: ${finalUrlString}`);
+
+    // --- 4. 外部APIへリクエスト転送 ---
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4500);
+
+    const response = await fetch(finalUrlString, {
       signal: controller.signal,
       headers: {
-        // 必要に応じてヘッダーを設定
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (compatible; StartpageProxy/1.0)",
+        Accept: "application/json, application/x-suggestions+json, */*",
       },
     });
     clearTimeout(timeoutId);
 
+    // ★★★ デバッグログ強化: ステータスとヘッダー全体を出力 ★★★
+    console.log(
+      `[Suggest Proxy] Response Status: ${response.status} for ${finalUrlString}`
+    );
+    console.log(
+      "[Suggest Proxy] Response Headers:",
+      JSON.stringify(Object.fromEntries(response.headers.entries()))
+    );
+
+    // レスポンスボディを読む前にクローンを作成 (複数回読むため)
+    const responseCloneForTextLog = response.clone();
+    const responseCloneForJsonParse = response.clone(); // JSONパース失敗時用
+
+    // ★★★ デバッグログ強化: ボディ内容をテキストで必ずログ出力 ★★★
+    responseCloneForTextLog
+      .text()
+      .then((textBody) =>
+        console.log(
+          "[Suggest Proxy] Response Body (text, first 500 chars):",
+          textBody.substring(0, 500)
+        )
+      )
+      .catch((err) =>
+        console.error(
+          "[Suggest Proxy] Error reading response body as text:",
+          err
+        )
+      );
+
+    // --- 5. レスポンスをクライアントに返す ---
     if (!response.ok) {
-      throw new Error(`External API fetch failed! status: ${response.status}`);
+      console.error(
+        `[Suggest Proxy] Response not OK (${response.status}) for ${finalUrlString}`
+      );
+      // エラーレスポンスの内容を返す試み
+      try {
+        const errorData = await response.json(); // エラーもJSON形式かもしれない
+        res.status(response.status).json(errorData);
+      } catch {
+        // JSONでなくても、ステータスコードとテキストを返す
+        res
+          .status(response.status)
+          .json({ error: `External API error: ${response.statusText}` });
+      }
+      return; // ここで処理終了
     }
 
-    const data = await response.json();
-    res.json(data); // 取得したJSONデータをそのまま返す
+    // 正常なレスポンスの場合
+    const contentType = response.headers.get("content-type");
+    console.log(`[Suggest Proxy] Processing with Content-Type: ${contentType}`);
+
+    if (
+      contentType &&
+      (contentType.includes("application/json") ||
+        contentType.includes("javascript") || // JSONP用
+        contentType.includes("application/x-suggestions+json")) // Wikipedia用
+    ) {
+      console.log("[Suggest Proxy] Trying to parse as JSON...");
+      try {
+        // ★ クローンではなく元の response を使う (一度しか読めないため)
+        const data = await response.json();
+        console.log(`[Suggest Proxy] Parsed JSON response successfully.`);
+        res.json(data); // クライアントにJSONデータを返す
+      } catch (parseError) {
+        console.error(
+          `[Suggest Proxy] Failed to parse JSON response: ${parseError}`
+        );
+        // JSONパース失敗時のボディ内容をログ出力 (クローンを使用)
+        responseCloneForJsonParse
+          .text()
+          .then((textBody) =>
+            console.error(
+              "[Suggest Proxy] Response body on JSON parse error:",
+              textBody.substring(0, 500)
+            )
+          )
+          .catch((err) =>
+            console.error(
+              "[Suggest Proxy] Error reading response body on JSON parse error:",
+              err
+            )
+          );
+        res
+          .status(500)
+          .json({ error: "Failed to parse suggestion data from source" });
+      }
+    } else if (contentType && contentType.includes("text/plain")) {
+      console.log("[Suggest Proxy] Trying to parse as text/plain...");
+      try {
+        const textData = await response.text(); // 元の response を使う
+        const jsonData = JSON.parse(textData);
+        console.log(`[Suggest Proxy] Parsed text/plain response as JSON.`);
+        res.json(jsonData);
+      } catch (parseError) {
+        console.warn(
+          `[Suggest Proxy] Failed to parse text/plain response as JSON from ${finalUrlString}`
+        );
+        // テキスト内容のログは上部で出力済み
+        res.status(500).json({
+          error:
+            "Received non-JSON or unparseable response from suggestion source",
+        });
+      }
+    } else {
+      console.log("[Suggest Proxy] Entering unexpected content-type block...");
+      // それ以外の予期しないコンテンツタイプ
+      console.warn(
+        `[Suggest Proxy] Handling unexpected content-type: ${contentType}`
+      );
+      // テキスト内容のログは上部で出力済み
+      res.status(500).json({
+        error: "Received unexpected response format from suggestion source",
+      });
+    }
   } catch (error) {
-    clearTimeout(timeoutId); //念のため
+    // ★ エラーハンドリング: tryブロック外でも参照可能な変数を使用
+    const baseUrlUsed = targetUrl; // 元のベースURL
+    // finalUrlString は try ブロック内で定義されているため、エラー時は未定義の可能性がある
+    // そのため、エラー発生箇所に応じて参照可能な変数を使う
+    const attemptedUrl = finalUrlString || baseUrlUsed; // finalUrlStringが定義されていればそれ、なければ元のベースURL
+
     if (error.name === "AbortError") {
-      console.error(`[Suggest Proxy] Request to ${finalSuggestUrl} timed out.`);
-      res.status(504).json({ error: "Suggestion request timed out" });
+      console.error(
+        `[Suggest Proxy] External API request timed out for ${attemptedUrl}`
+      );
+      res.status(504).json({ error: "Suggestion source request timed out" });
     } else {
       console.error(
-        `[Suggest Proxy] Error fetching suggestions from ${finalSuggestUrl}:`,
-        error.message
+        `[Suggest Proxy] Error during external API request for ${attemptedUrl}:`,
+        error
       );
       res
         .status(502)
-        .json({ error: "Failed to fetch suggestions from external source" }); // 502 Bad Gateway
+        .json({ error: "Bad Gateway - Error connecting to suggestion source" });
     }
   }
-});
+}); // app.get('/suggest', ...) の終わり
 
 // タイトル取得API (/fetch-title)
 app.get("/fetch-title", async (req, res) => {
   console.log("GET /fetch-title received:", req.query);
-  const targetUrl = req.query.url; // クエリパラメータからURLを取得
+  const targetUrl = req.query.url;
 
   // --- 1. URLの基本的な検証 ---
   if (!targetUrl) {
     return res.status(400).json({ error: "URL parameter is required" });
   }
-
   let parsedUrl;
   try {
     parsedUrl = new URL(targetUrl);
     if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
       throw new Error("Invalid protocol");
     }
-    // ★ ここでさらに厳格な検証を追加可能 (例: 内部IPでないか)
+    // ★ ここでさらに厳格な検証を追加可能 (例: 内部IPでないか、許可ドメインリストなど)
   } catch (error) {
     console.error("[FetchTitle] Invalid URL:", targetUrl, error.message);
     return res.status(400).json({ error: "Invalid or unsupported URL format" });
   }
 
   console.log(`[FetchTitle] Attempting to fetch title from: ${targetUrl}`);
-
   try {
     // --- 2. 外部サイトへリクエスト ---
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 8000); // 8秒タイムアウト
-    // ★ Node.js v18未満の場合は node-fetch を require して使う
     const response = await fetch(targetUrl, {
       signal: controller.signal,
       headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (compatible; StartpageTitleFetcher/1.0)",
         Accept: "text/html",
         "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
       },
-      redirect: "follow",
+      redirect: "follow", // リダイレクトを許可
     });
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      // 4xx, 5xx エラーの場合
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    // --- 3. HTMLを取得しタイトルを抽出 (正規表現) ---
+    // --- 3. HTMLを取得しタイトルを抽出 ---
     const html = await response.text();
-    const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-    const title = titleMatch && titleMatch[1] ? titleMatch[1].trim() : null;
+    // cheerio を使ってより確実に抽出
+    const $ = cheerio.load(html);
+    let title = $("title").first().text().trim();
+
+    // もし cheerio で取れなければ正規表現を試す (代替)
+    if (!title) {
+      const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      title = titleMatch && titleMatch[1] ? titleMatch[1].trim() : null;
+    }
 
     if (title) {
       console.log(`[FetchTitle] Title found: "${title}"`);
-      res.json({ title: title }); // ★ res.json で返す
+      res.json({ title: title });
     } else {
       console.log(`[FetchTitle] Title tag not found in HTML from ${targetUrl}`);
-      res.json({ title: null }); // ★ res.json で返す
+      res.json({ title: null }); // タイトルが見つからなかった場合
     }
   } catch (error) {
-    // clearTimeout(timeoutId); //念のため (エラー発生前にクリアされているはず)
+    // clearTimeout(timeoutId); // 念のため
     if (error.name === "AbortError") {
       console.error(`[FetchTitle] Request timed out for ${targetUrl}`);
-      res.status(504).json({ error: "Request timed out" }); // ★ res.status().json()
+      res.status(504).json({ error: "Request timed out while fetching title" });
     } else {
       console.error(
         `[FetchTitle] Error fetching URL ${targetUrl}:`,
         error.message
       );
-      res.status(500).json({ error: "Failed to fetch or process the URL" }); // ★ res.status().json()
+      res
+        .status(500)
+        .json({ error: "Failed to fetch or process the URL for title" });
     }
   }
 });
@@ -211,9 +350,7 @@ app.get("/fetch-favicon", async (req, res) => {
 
   // --- 1. URLの基本的な検証 ---
   if (!targetUrl) {
-    /* ... (fetchTitleと同様のエラー処理) ... */ return res
-      .status(400)
-      .json(/*...*/);
+    return res.status(400).json({ error: "URL parameter is required" });
   }
   let pageUrlObject;
   try {
@@ -226,51 +363,72 @@ app.get("/fetch-favicon", async (req, res) => {
     }
     // ★ ここでさらに厳格なURL検証を追加可能
   } catch (error) {
-    /* ... (fetchTitleと同様のエラー処理) ... */ return res
-      .status(400)
-      .json(/*...*/);
+    console.error("[FetchFavicon] Invalid URL:", targetUrl, error.message);
+    return res.status(400).json({ error: "Invalid or unsupported URL format" });
   }
   const pageOrigin = pageUrlObject.origin;
 
   console.log(`[FetchFavicon] Attempting to fetch favicon for: ${targetUrl}`);
-
   try {
     // --- 2. ページのHTMLを取得 ---
     const controllerHtml = new AbortController();
     const timeoutHtml = setTimeout(() => controllerHtml.abort(), 8000);
     const htmlResponse = await fetch(targetUrl, {
-      /* ... (fetchTitleと同様のヘッダーなど) ... */
+      signal: controllerHtml.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; StartpageFaviconFetcher/1.0)",
+        Accept: "text/html",
+      },
+      redirect: "follow",
     });
     clearTimeout(timeoutHtml);
     if (!htmlResponse.ok) {
       throw new Error(`HTML fetch failed! status: ${htmlResponse.status}`);
     }
     const html = await htmlResponse.text();
-    const $ = cheerio.load(html); // ★ cheerioで解析
+    const $ = cheerio.load(html);
 
-    // --- 3. ファビコンURLを探す ---
+    // --- 3. ファビコンURLを探す (優先度順) ---
     let faviconUrl = null;
     const selectors = [
-      'link[rel="apple-touch-icon"]',
-      'link[rel="shortcut icon"]',
-      'link[rel="icon"]',
+      'link[rel="apple-touch-icon"]', // iOS用 (高解像度の場合が多い)
+      'link[rel="icon"][sizes]', // サイズ指定ありのicon
+      'link[rel="shortcut icon"]', // 古い形式
+      'link[rel="icon"]', // 一般的なicon
     ];
-    for (const selector of selectors) {
-      const href = $(selector).last().attr("href");
-      if (href) {
+    // サイズが大きいものを優先するロジック (より高度)
+    let bestSize = 0;
+    selectors.forEach((selector) => {
+      $(selector).each((i, el) => {
+        const href = $(el).attr("href");
+        if (!href) return;
         try {
-          faviconUrl = new URL(href, pageOrigin).toString();
-          console.log(
-            `[FetchFavicon] Found icon URL in HTML (${selector}): ${faviconUrl}`
-          );
-          break;
+          const currentUrl = new URL(href, pageOrigin).toString();
+          const sizes = $(el).attr("sizes"); // sizes属性を取得
+          let currentSize = 0;
+          if (sizes) {
+            const sizeMatch = sizes.match(/(\d+)[xX]\d+/); // 最初の数字を取得
+            if (sizeMatch) currentSize = parseInt(sizeMatch[1], 10);
+          }
+          // より大きいサイズのアイコンが見つかったら更新
+          if (currentSize > bestSize || !faviconUrl) {
+            faviconUrl = currentUrl;
+            bestSize = currentSize;
+            console.log(
+              `[FetchFavicon] Found potential icon (${selector}, size: ${
+                sizes || "N/A"
+              }): ${faviconUrl}`
+            );
+          }
         } catch (e) {
           console.warn(
             `[FetchFavicon] Invalid href found (${selector}): ${href}`
           );
         }
-      }
-    }
+      });
+    });
+
+    // HTML内で見つからなければ、ルートの favicon.ico を試す
     if (!faviconUrl) {
       try {
         faviconUrl = new URL("/favicon.ico", pageOrigin).toString();
@@ -278,7 +436,7 @@ app.get("/fetch-favicon", async (req, res) => {
           `[FetchFavicon] Trying default /favicon.ico: ${faviconUrl}`
         );
       } catch (e) {
-        /* ... エラー処理 ... */
+        /* エラーは無視 */
       }
     }
 
@@ -286,22 +444,26 @@ app.get("/fetch-favicon", async (req, res) => {
       console.log(
         `[FetchFavicon] Could not find any favicon URL for ${targetUrl}`
       );
-      return res.json({ faviconDataUrl: null }); // ★ res.json で返す
+      return res.json({ faviconDataUrl: null });
     }
 
     // --- 4. 見つけたURLからファビコン画像を取得 ---
     console.log(`[FetchFavicon] Fetching image from: ${faviconUrl}`);
     const controllerIcon = new AbortController();
-    const timeoutIcon = setTimeout(() => controllerIcon.abort(), 5000);
+    const timeoutIcon = setTimeout(() => controllerIcon.abort(), 5000); // アイコン取得タイムアウト
     const iconResponse = await fetch(faviconUrl, {
       signal: controllerIcon.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; StartpageFaviconFetcher/1.0)",
+      },
     });
     clearTimeout(timeoutIcon);
 
     if (!iconResponse.ok) {
+      // 特に /favicon.ico が 404 の場合はよくあること
       if (iconResponse.status === 404 && faviconUrl.endsWith("/favicon.ico")) {
         console.log(`[FetchFavicon] Default /favicon.ico returned 404.`);
-        return res.json({ faviconDataUrl: null }); // ★ res.json で返す
+        return res.json({ faviconDataUrl: null });
       }
       throw new Error(
         `Favicon fetch failed! status: ${iconResponse.status} from ${faviconUrl}`
@@ -310,8 +472,16 @@ app.get("/fetch-favicon", async (req, res) => {
 
     // --- 5. 画像データをBase64 Data URLに変換 ---
     const imageBuffer = Buffer.from(await iconResponse.arrayBuffer());
+    // Content-Type を取得、なければ推測 (より安全な方法を検討)
     const contentType =
       iconResponse.headers.get("content-type") || "image/x-icon";
+    // ★ セキュリティ: SVGの場合はサニタイズが必要かもしれない
+    if (contentType.includes("svg")) {
+      // サニタイズ処理をここに実装 (例: DOMPurifyなど)
+      console.warn(
+        "[FetchFavicon] SVG favicon found, sanitization recommended but not implemented."
+      );
+    }
     const faviconDataUrl = `data:${contentType};base64,${imageBuffer.toString(
       "base64"
     )}`;
@@ -319,7 +489,7 @@ app.get("/fetch-favicon", async (req, res) => {
     console.log(
       `[FetchFavicon] Favicon fetched successfully for ${targetUrl} (type: ${contentType})`
     );
-    res.json({ faviconDataUrl: faviconDataUrl }); // ★ res.json で返す
+    res.json({ faviconDataUrl: faviconDataUrl });
   } catch (error) {
     // clearTimeout(timeoutHtml); // 念のため
     // clearTimeout(timeoutIcon); // 念のため
@@ -327,22 +497,23 @@ app.get("/fetch-favicon", async (req, res) => {
       console.error(
         `[FetchFavicon] Request timed out for ${targetUrl} or its favicon.`
       );
-      res.status(504).json({ error: "Request timed out" }); // ★ res.status().json()
+      res
+        .status(504)
+        .json({ error: "Request timed out while fetching favicon" });
     } else {
       console.error(
         `[FetchFavicon] Error fetching favicon for ${targetUrl}:`,
         error.message
       );
-      res.status(500).json({ error: "Failed to fetch or process favicon" }); // ★ res.status().json()
+      // ページ自体は存在してもファビコン取得でエラーになることは多いので500よりは specific なエラーが良いかも
+      res.status(502).json({ error: "Failed to fetch or process favicon" });
     }
   }
 });
 
-// --- ルートパスの処理 ---
-// public/index.html をデフォルトで提供
-// express.staticが '/' へのリクエストで index.html を探してくれるので、
-// 通常はこのルートハンドラは不要な場合が多い。
-// 明示的に設定する場合:
+// --- ルートURL ('/') へのアクセス ---
+// 静的ファイル配信が index.html を自動的に返すので、通常は不要。
+// SPA(Single Page Application)的なルーティングが必要な場合はここに記述。
 // app.get('/', (req, res) => {
 //   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 // });
