@@ -1,36 +1,41 @@
 // --- Built-in Engines Definition ---
 const builtinEngines = {
   g: {
-    name: "Google",
-    url: "https://www.google.com/search?q=%s",
-    suggestUrl: "g",
-    iconUrl: "https://icons.duckduckgo.com/ip3/google.com.ico", // ★ 追加
+    name: "Google (JA)", // 名前を明確化
+    url: "https://www.google.com/search?q=%s&hl=ja", // 日本語検索をデフォルトに
+    // ★ サジェストURLを完全な形式で指定 (日本語)
+    suggestUrl:
+      "https://suggestqueries.google.com/complete/search?client=firefox&hl=ja&q=",
+    iconUrl: "https://icons.duckduckgo.com/ip3/google.com.ico",
   },
-  ge: {
-    name: "Google(EN)",
+  gs: {
+    name: "Google (EN)",
     url: "https://www.google.com/search?q=%s&hl=en",
-    suggestUrl: "ge",
-    iconUrl: "https://icons.duckduckgo.com/ip3/google.com.ico", // ★ 追加
+    // ★ サジェストURLを完全な形式で指定 (英語)
+    suggestUrl:
+      "https://suggestqueries.google.com/complete/search?client=firefox&hl=en&q=",
+    iconUrl: "https://icons.duckduckgo.com/ip3/google.com.ico",
   },
   y: {
     name: "YouTube",
     url: "https://www.youtube.com/results?search_query=%s",
+    // ★ YouTubeサジェスト (Google API, 日本語指定)
     suggestUrl:
-      "https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=",
-    iconUrl: "https://icons.duckduckgo.com/ip3/youtube.com.ico", // ★ 追加
+      "https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&hl=ja&q=",
+    iconUrl: "https://icons.duckduckgo.com/ip3/youtube.com.ico",
   },
   a: {
-    name: "Amazon",
+    name: "Amazon (JP)",
     url: "https://www.amazon.co.jp/s?k=%s",
-    suggestUrl: null,
-    iconUrl: "https://icons.duckduckgo.com/ip3/amazon.co.jp.ico", // ★ 追加
+    suggestUrl:
+      "https://completion.amazon.co.jp/search/complete?search-alias=aps&client=amazon-search-ui&mkt=6&q=",
+    iconUrl: "https://icons.duckduckgo.com/ip3/amazon.co.jp.ico",
   },
   w: {
-    name: "Wikipedia",
+    name: "Wikipedia (JA)",
     url: "https://ja.wikipedia.org/wiki/%s",
-    suggestUrl:
-      "https://ja.wikipedia.org/w/api.php?action=opensearch&format=json&search=",
-    iconUrl: "https://icons.duckduckgo.com/ip3/ja.wikipedia.org.ico", // ★ 追加
+    suggestUrl: "https://ja.wikipedia.org/w/api.php?action=opensearch&search=",
+    iconUrl: "https://icons.duckduckgo.com/ip3/wikipedia.org.ico",
   },
   m: {
     name: "Google Maps",
@@ -38,8 +43,8 @@ const builtinEngines = {
     suggestUrl: null,
     iconUrl: "https://www.google.com/images/branding/product/ico/maps_32dp.ico", // Google提供のアイコン例
   },
-  t: {
-    name: "Twitter",
+  x: {
+    name: "X",
     url: "https://twitter.com/search?q=%s",
     suggestUrl: null,
     iconUrl: "https://icons.duckduckgo.com/ip3/twitter.com.ico", // ★ 追加 (Xアイコンになるかも)
@@ -60,170 +65,568 @@ const builtinEngines = {
   b: {
     name: "Bing",
     url: "https://www.bing.com/search?q=%s",
-    suggestUrl: "b",
-    iconUrl: "https://icons.duckduckgo.com/ip3/bing.com.ico", // ★ 追加
+    // ★ サジェストURLを完全な形式で指定
+    suggestUrl: "https://api.bing.com/osjson.aspx?query=",
+    iconUrl: "https://icons.duckduckgo.com/ip3/bing.com.ico",
   },
   d: {
     name: "DuckDuckGo",
     url: "https://duckduckgo.com/?q=%s",
-    suggestUrl: "d",
-    iconUrl: "https://icons.duckduckgo.com/ip3/duckduckgo.com.ico", // ★ 追加
+    // ★ サジェストURLを完全な形式で指定
+    suggestUrl: "https://duckduckgo.com/ac/?q=",
+    iconUrl: "https://icons.duckduckgo.com/ip3/duckduckgo.com.ico",
   },
-};
-
-// ★ JSONPフォールバックに使用するURLを定義
-const JSONP_FALLBACK_URLS = {
-  g: "https://suggestqueries.google.com/complete/search?client=firefox&ds=yt",
-  ge: "https://suggestqueries.google.com/complete/search?client=firefox&ds=yt",
-  y: "https://suggestqueries.google.com/complete/search?client=firefox&ds=yt",
-  w: "https://ja.wikipedia.org/w/api.php?action=opensearch&format=json",
-};
-
-// ★ プロキシ経由でアクセスするサジェストAPIのベースURLを定義
-const PROXY_TARGET_URLS = {
-  g: "https://suggestqueries.google.com/complete/search?client=firefox&ds=yt",
-  ge: "https://suggestqueries.google.com/complete/search?client=firefox&ds=yt",
-  b: "https://api.bing.com/osjson.aspx",
-  d: "https://duckduckgo.com/ac/",
 };
 
 // --- Application Settings Management ---
+// script.js
+
+// --- アプリケーション設定管理 ---
 const AppSettings = {
+  // localStorageで使用するキー
   KEYS: {
-    SPEED_DIAL: "speedDialData",
-    CUSTOM_ENGINES: "customEngines",
-    DELETED_BUILTIN: "deletedBuiltinEngines",
+    CUSTOM_ENGINES: "customSearchEngines_v2",
+    DELETED_BUILTIN: "deletedBuiltinEngines_v2",
+    SPEED_DIAL: "speedDialData_v2",
     COLUMNS: "speedDialColumns",
-    FAVICONS: "faviconsCache",
+    FAVICONS: "faviconsCache_v2",
+    CURRENT_ENGINE: "currentSearchEngine", // 現在のエンジン
+    THEME: "startpageTheme", // テーマ設定 (例)
+    BACKGROUND: "startpageBackground", // 背景設定 (例)
+    // 他に必要な設定キーがあれば追加
   },
+  // アプリケーションのメモリ上に保持する設定値
   values: {
-    speedDial: [],
-    engines: {},
-    deletedBuiltinEngines: [],
-    columns: 4,
-    favicons: {},
+    engines: {}, // 検索エンジンリスト (ビルトイン + カスタム - 削除済み)
+    deletedBuiltinEngines: [], // ユーザーが削除したビルトインエンジンのニックネームリスト
+    speedDial: [], // スピードダイアルのデータ
+    columns: 4, // スピードダイアルの列数
+    favicons: {}, // ファビコンキャッシュ (Data URL)
+    theme: "system", // テーマ ('light', 'dark', 'system')
+    background: "", // 背景画像/色の設定値
+    // currentEngine は values に保持せず、都度 localStorage から読む or キャッシュを使う
   },
-  load() {
+  // デフォルト値 (localStorage に値がない場合に使用)
+  defaults: {
+    columns: 4,
+    theme: "system",
+    background: "",
+  },
+
+  /**
+   * アプリケーション起動時に設定をロードする
+   */
+  load: function () {
+    console.log("[AppSettings] Loading settings...");
+    // 各設定値を localStorage から読み込み、なければデフォルト値を使用
+    this.values.columns = parseInt(
+      localStorage.getItem(this.KEYS.COLUMNS) || this.defaults.columns,
+      10
+    );
     this.values.speedDial = JSON.parse(
       localStorage.getItem(this.KEYS.SPEED_DIAL) || "[]"
     );
     this.values.favicons = JSON.parse(
       localStorage.getItem(this.KEYS.FAVICONS) || "{}"
     );
-    const savedColumns = localStorage.getItem(this.KEYS.COLUMNS);
-    this.values.columns = savedColumns ? parseInt(savedColumns, 10) : 4;
-    this.values.columns = Math.max(1, Math.min(15, this.values.columns));
+    this.values.theme =
+      localStorage.getItem(this.KEYS.THEME) || this.defaults.theme;
+    this.values.background =
+      localStorage.getItem(this.KEYS.BACKGROUND) || this.defaults.background;
 
+    // エンジン設定をロード (カスタム/削除済みを考慮)
+    this.loadEngines();
+
+    // 現在のエンジンをキャッシュに読み込む (任意だが効率化のため)
+    cache.currentEngine = this.getCurrentEngine();
+
+    // ロードした設定をUIに反映 (例: テーマ適用など)
+    this.applyTheme();
+    this.applyBackground(); // 背景適用処理 (もしあれば)
+
+    console.log("[AppSettings] Settings loaded:", this.values);
+  },
+
+  /**
+   * 現在のメモリ上の設定値を localStorage に保存する
+   */
+  save: function () {
+    console.log("[AppSettings] Saving settings...");
+    try {
+      localStorage.setItem(this.KEYS.COLUMNS, this.values.columns.toString());
+      localStorage.setItem(
+        this.KEYS.SPEED_DIAL,
+        JSON.stringify(this.values.speedDial)
+      );
+      localStorage.setItem(
+        this.KEYS.FAVICONS,
+        JSON.stringify(this.values.favicons)
+      );
+      localStorage.setItem(this.KEYS.THEME, this.values.theme);
+      localStorage.setItem(this.KEYS.BACKGROUND, this.values.background);
+
+      // エンジン設定を保存 (カスタム/削除済みを考慮)
+      this.saveEngines();
+      // deletedBuiltinEngines は saveEngines 内ではなくここで保存
+      localStorage.setItem(
+        this.KEYS.DELETED_BUILTIN,
+        JSON.stringify(this.values.deletedBuiltinEngines)
+      );
+      // 現在のエンジンは setCurrentEngine で保存されるので、ここでは不要
+
+      console.log("[AppSettings] Settings saved successfully.");
+    } catch (error) {
+      console.error(
+        "[AppSettings] Error saving settings to localStorage:",
+        error
+      );
+      // クォータ超過などの可能性
+      alert(
+        "設定の保存中にエラーが発生しました。ストレージの空き容量を確認してください。"
+      );
+    }
+  },
+
+  /**
+   * エンジン設定 (カスタム/削除済み) をロードし、this.values.engines を構築する
+   */
+  loadEngines: function () {
+    // 1. まずビルトインエンジンをディープコピーして基本とする
+    this.values.engines = JSON.parse(JSON.stringify(builtinEngines));
+
+    // 2. 削除済みビルトインエンジンリストをロード
     this.values.deletedBuiltinEngines = JSON.parse(
       localStorage.getItem(this.KEYS.DELETED_BUILTIN) || "[]"
     );
-    this.loadEngines();
 
-    cache.favicons = this.values.favicons;
-    cache.engines = this.values.engines;
-  },
-  loadEngines() {
-    this.values.engines = JSON.parse(JSON.stringify(builtinEngines));
+    // 3. 削除済みリストに基づいてビルトインエンジンを削除
     this.values.deletedBuiltinEngines.forEach((nickname) => {
       if (this.values.engines[nickname]) {
         delete this.values.engines[nickname];
+        // console.log(`[LoadEngines] Removed deleted builtin engine: ${nickname}`);
       }
     });
+
+    // 4. カスタムエンジン (追加または変更されたビルトイン) をロードしてマージ
     const storedCustomEngines = localStorage.getItem(this.KEYS.CUSTOM_ENGINES);
     if (storedCustomEngines) {
       try {
         const loadedCustomEngines = JSON.parse(storedCustomEngines);
         for (const nickname in loadedCustomEngines) {
-          if (this.values.engines[nickname]) {
-            const existingEngine = this.values.engines[nickname];
-            const customEngine = loadedCustomEngines[nickname];
-            let suggestUrlToUse = customEngine.suggestUrl;
-            if (
-              typeof existingEngine.suggestUrl === "string" &&
-              existingEngine.suggestUrl === nickname
-            ) {
-              suggestUrlToUse = existingEngine.suggestUrl;
-            }
-            this.values.engines[nickname] = {
-              ...existingEngine,
-              ...customEngine,
-              suggestUrl: suggestUrlToUse,
-            };
-          } else {
-            this.values.engines[nickname] = loadedCustomEngines[nickname];
-          }
+          // カスタムエンジンは単純に追加/上書き
+          this.values.engines[nickname] = loadedCustomEngines[nickname];
+          // console.log(`[LoadEngines] Loaded custom/modified engine: ${nickname}`);
         }
       } catch (e) {
         console.error(
-          "Failed to load or merge custom engines from localStorage:",
+          "[LoadEngines] Error parsing custom engines from localStorage:",
           e
         );
-        localStorage.removeItem(this.KEYS.CUSTOM_ENGINES);
+        // localStorage.removeItem(this.KEYS.CUSTOM_ENGINES); // 不正なデータを削除する？
       }
     }
-    cache.engines = this.values.engines;
+    cache.engines = this.values.engines; // キャッシュ更新
+    console.log("[LoadEngines] Final engines loaded:", this.values.engines);
   },
-  save() {
-    localStorage.setItem(
-      this.KEYS.SPEED_DIAL,
-      JSON.stringify(this.values.speedDial)
-    );
-    localStorage.setItem(
-      this.KEYS.FAVICONS,
-      JSON.stringify(this.values.favicons)
-    );
-    localStorage.setItem(this.KEYS.COLUMNS, this.values.columns);
-    localStorage.setItem(
-      this.KEYS.DELETED_BUILTIN,
-      JSON.stringify(this.values.deletedBuiltinEngines)
-    );
-    this.saveEngines();
-  },
-  saveEngines() {
+
+  /**
+   * カスタムエンジン/変更されたビルトインエンジンを localStorage に保存する
+   * (deletedBuiltinEngines は save() 関数で別途保存される)
+   */
+  saveEngines: function () {
     const customEnginesToSave = {};
     for (const nickname in this.values.engines) {
+      // ビルトインに存在しないニックネームか、
+      // またはビルトインに存在するが内容が変更されているエンジンのみを保存対象とする
       if (
         !builtinEngines[nickname] ||
         JSON.stringify(this.values.engines[nickname]) !==
           JSON.stringify(builtinEngines[nickname])
       ) {
-        if (
-          !(
-            builtinEngines[nickname] &&
-            this.values.deletedBuiltinEngines.includes(nickname)
-          )
-        ) {
-          customEnginesToSave[nickname] = this.values.engines[nickname];
-        }
+        // この条件で、追加されたカスタムエンジンと、内容が変更されたビルトインエンジンが対象となる
+        customEnginesToSave[nickname] = this.values.engines[nickname];
       }
     }
     localStorage.setItem(
       this.KEYS.CUSTOM_ENGINES,
       JSON.stringify(customEnginesToSave)
     );
+    console.log(
+      "[SaveEngines] Saved custom/modified engines:",
+      customEnginesToSave
+    );
   },
-  setSpeedDial(data) {
-    this.values.speedDial = data;
-    localStorage.setItem(this.KEYS.SPEED_DIAL, JSON.stringify(data));
+
+  /**
+   * 現在選択されている検索エンジンのニックネームを取得する
+   * @returns {string | null} 現在のエンジンのニックネーム、または見つからない場合は null
+   */
+  getCurrentEngine: function () {
+    const storedEngine = localStorage.getItem(this.KEYS.CURRENT_ENGINE);
+
+    // 保存されているエンジンが現在の有効なエンジンリストに存在するか確認
+    if (
+      storedEngine &&
+      this.values.engines &&
+      this.values.engines[storedEngine]
+    ) {
+      return storedEngine;
+    }
+
+    // 存在しない場合や未設定の場合はデフォルト 'g' を試す
+    const defaultEngine = "g";
+    if (this.values.engines && this.values.engines[defaultEngine]) {
+      if (storedEngine) {
+        // 無効な値が保存されていた場合
+        console.warn(
+          `[GetCurrentEngine] Stored engine '${storedEngine}' not found or invalid, falling back to '${defaultEngine}'.`
+        );
+      } else {
+        // 未設定だった場合
+        console.log(
+          `[GetCurrentEngine] No current engine set, using default '${defaultEngine}'.`
+        );
+      }
+      // デフォルトエンジンをlocalStorageにも設定しておく (任意)
+      // localStorage.setItem(this.KEYS.CURRENT_ENGINE, defaultEngine);
+      return defaultEngine;
+    }
+
+    // デフォルト 'g' すら存在しない場合、リストの最初のエンジンを返す
+    const engineKeys = Object.keys(this.values.engines || {});
+    if (engineKeys.length > 0) {
+      const firstEngine = engineKeys[0];
+      console.warn(
+        `[GetCurrentEngine] Default engine '${defaultEngine}' not found, using first available engine: ${firstEngine}`
+      );
+      // localStorage.setItem(this.KEYS.CURRENT_ENGINE, firstEngine); // 最初のエンジンを保存
+      return firstEngine;
+    }
+
+    // 有効なエンジンが全くない場合
+    console.error("[GetCurrentEngine] No valid engines available!");
+    return null;
   },
-  setFavicons(data) {
-    this.values.favicons = data;
-    localStorage.setItem(this.KEYS.FAVICONS, JSON.stringify(data));
-    cache.favicons = data;
+
+  /**
+   * 現在の検索エンジンを設定する
+   * @param {string} nickname - 設定するエンジンのニックネーム
+   */
+  setCurrentEngine: function (nickname) {
+    // 設定しようとしているニックネームが有効なエンジンリストに存在するか確認
+    if (nickname && this.values.engines && this.values.engines[nickname]) {
+      localStorage.setItem(this.KEYS.CURRENT_ENGINE, nickname);
+      cache.currentEngine = nickname; // キャッシュも更新
+      console.log(`[SetCurrentEngine] Current engine set to: ${nickname}`);
+    } else {
+      console.error(
+        `[SetCurrentEngine] Attempted to set invalid or non-existent engine: ${nickname}`
+      );
+    }
   },
-  setColumns(cols) {
-    const validCols = Math.max(1, Math.min(15, parseInt(cols, 10) || 4));
-    this.values.columns = validCols;
-    localStorage.setItem(this.KEYS.COLUMNS, validCols);
+
+  /**
+   * ファビコンキャッシュを追加または更新する
+   * @param {string} domain - ドメイン名
+   * @param {string} dataUrl - ファビコンの Data URL
+   */
+  setFaviconCache: function (domain, dataUrl) {
+    if (!domain || !dataUrl) return;
+    this.values.favicons[domain] = { url: dataUrl, timestamp: Date.now() };
+    this.cleanFaviconCache(); // キャッシュ整理を実行
+    this.save(); // 変更を保存
+  },
+
+  /**
+   * ファビコンキャッシュを取得する
+   * @param {string} domain - ドメイン名
+   * @returns {string | null} ファビコンの Data URL、または null
+   */
+  getFaviconCache: function (domain) {
+    const cacheEntry = this.values.favicons[domain];
+    if (cacheEntry) {
+      // 有効期限チェック (例: 30日)
+      const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+      if (Date.now() - cacheEntry.timestamp < maxAge) {
+        return cacheEntry.url;
+      } else {
+        // 古いキャッシュは削除
+        delete this.values.favicons[domain];
+        this.save(); // 削除を保存
+        return null;
+      }
+    }
+    return null;
+  },
+
+  /**
+   * ファビコンキャッシュを整理する (古いものや上限を超えたものを削除)
+   */
+  cleanFaviconCache: function () {
+    const maxCacheSize = 100; // キャッシュする最大件数 (例)
+    const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
+    const now = Date.now();
+    let cacheChanged = false;
+
+    const domains = Object.keys(this.values.favicons);
+
+    // 古いキャッシュを削除
+    domains.forEach((domain) => {
+      if (now - this.values.favicons[domain].timestamp >= maxAge) {
+        delete this.values.favicons[domain];
+        cacheChanged = true;
+        console.log(
+          `[CleanCache] Removed expired favicon cache for: ${domain}`
+        );
+      }
+    });
+
+    // 上限を超えている場合、古いものから削除
+    const currentSize = Object.keys(this.values.favicons).length;
+    if (currentSize > maxCacheSize) {
+      // タイムスタンプでソートして古いものを見つける
+      const sortedDomains = Object.keys(this.values.favicons).sort((a, b) => {
+        return (
+          this.values.favicons[a].timestamp - this.values.favicons[b].timestamp
+        );
+      });
+      const domainsToRemove = sortedDomains.slice(
+        0,
+        currentSize - maxCacheSize
+      );
+      domainsToRemove.forEach((domain) => {
+        delete this.values.favicons[domain];
+        cacheChanged = true;
+        console.log(
+          `[CleanCache] Removed oldest favicon cache due to size limit: ${domain}`
+        );
+      });
+    }
+
+    // 変更があれば保存
+    // if (cacheChanged) {
+    //     this.save(); // save()は他の処理からも呼ばれるので、ここでは不要かも
+    // }
+  },
+
+  /**
+   * テーマ設定を適用する
+   */
+  applyTheme: function () {
+    const theme = this.values.theme;
+    document.body.classList.remove("light-theme", "dark-theme"); // 既存クラスを削除
+    if (theme === "light") {
+      document.body.classList.add("light-theme");
+    } else if (theme === "dark") {
+      document.body.classList.add("dark-theme");
+    } else {
+      // 'system' または不明な値
+      // system テーマの処理 ( prefers-color-scheme を使うなど)
+      // ここでは body に特定のクラスは付けず、CSS側で prefers-color-scheme を使う想定
+    }
+    console.log(`[ApplyTheme] Applied theme: ${theme}`);
+  },
+
+  /**
+   * 背景設定を適用する (実装例)
+   */
+  applyBackground: function () {
+    const backgroundValue = this.values.background;
+    if (backgroundValue) {
+      if (
+        backgroundValue.startsWith("http") ||
+        backgroundValue.startsWith("data:image")
+      ) {
+        // URL または Data URI の場合
+        document.body.style.backgroundImage = `url('${backgroundValue}')`;
+        document.body.style.backgroundSize = "cover"; // 例
+        document.body.style.backgroundPosition = "center"; // 例
+      } else if (
+        backgroundValue.startsWith("#") ||
+        backgroundValue.startsWith("rgb")
+      ) {
+        // 色コードの場合
+        document.body.style.backgroundImage = "none";
+        document.body.style.backgroundColor = backgroundValue;
+      } else {
+        // それ以外 (例: グラデーション指定など) は直接設定
+        document.body.style.background = backgroundValue;
+      }
+      console.log(`[ApplyBackground] Applied background: ${backgroundValue}`);
+    } else {
+      // 設定がない場合はデフォルトに戻す
+      document.body.style.backgroundImage = "";
+      document.body.style.backgroundColor = ""; // またはデフォルト色
+      document.body.style.background = "";
+      console.log(`[ApplyBackground] Cleared background setting.`);
+    }
+  },
+
+  // 他のヘルパーメソッドなどがあれば追加 (例: 設定のリセット機能など)
+  resetToDefaults: function () {
+    if (
+      confirm(
+        "本当にすべての設定をリセットしますか？\n(カスタムエンジン、スピードダイアル、テーマ設定などが初期化されます)"
+      )
+    ) {
+      console.warn("[AppSettings] Resetting all settings to defaults...");
+      // localStorage から関連キーを削除
+      Object.values(this.KEYS).forEach((key) => {
+        localStorage.removeItem(key);
+      });
+      // ページをリロードしてデフォルト設定で再初期化
+      location.reload();
+    }
   },
 };
 
-// --- Global Cache and State ---
+// --- グローバルキャッシュ (任意だがパフォーマンス向上に寄与) ---
 const cache = {
-  suggestions: {},
   engines: {},
-  favicons: {},
+  currentEngine: null,
+  suggestions: {}, // ★★★ サジェストキャッシュ用のオブジェクトを追加 ★★★
+  // 他に必要なキャッシュがあれば追加
+  // 例: スピードダイアルの DOM 要素キャッシュなど
+  speedDialItems: {},
 };
+
+// --- Settings Export/Import ---
+
+/**
+ * 現在の設定をJSONファイルとしてエクスポートする
+ */
+function exportSettings() {
+  console.log("Exporting settings...");
+  try {
+    // 1. localStorageから現在の設定値を取得
+    const settingsToExport = {
+      version: 1, // 設定ファイルのバージョン
+      customEngines:
+        localStorage.getItem(AppSettings.KEYS.CUSTOM_ENGINES) || "{}",
+      deletedBuiltinEngines:
+        localStorage.getItem(AppSettings.KEYS.DELETED_BUILTIN) || "[]",
+      speedDialData: localStorage.getItem(AppSettings.KEYS.SPEED_DIAL) || "[]",
+      speedDialColumns: localStorage.getItem(AppSettings.KEYS.COLUMNS) || "4",
+      faviconsCache: localStorage.getItem(AppSettings.KEYS.FAVICONS) || "{}",
+      // 必要であれば他の設定項目も追加 (例: テーマ設定など)
+    };
+
+    // 2. 設定オブジェクトをJSON文字列に変換
+    const jsonString = JSON.stringify(settingsToExport, null, 2); // null, 2 で整形
+
+    // 3. JSON文字列をBlobオブジェクトに変換
+    const blob = new Blob([jsonString], { type: "application/json" });
+
+    // 4. ダウンロード用のリンクを作成してクリック
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    const timestamp = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    link.download = `startpage-settings-${timestamp}.json`; // ファイル名
+    document.body.appendChild(link); // Firefoxで必要
+    link.click();
+    document.body.removeChild(link); // 後片付け
+    URL.revokeObjectURL(link.href); // メモリ解放
+
+    console.log("Settings exported successfully.");
+    alert("設定がエクスポートされました。");
+  } catch (error) {
+    console.error("Error exporting settings:", error);
+    alert("設定のエクスポート中にエラーが発生しました。");
+  }
+}
+
+/**
+ * インポートボタンがクリックされたときの処理 (ファイル選択をトリガー)
+ */
+function triggerImport() {
+  if (elements.importSettingsFile) {
+    elements.importSettingsFile.click(); // 非表示のinput[type=file]をクリック
+  }
+}
+
+/**
+ * ファイルが選択されたときの処理 (設定の読み込みと適用)
+ * @param {Event} event - ファイル入力のchangeイベント
+ */
+function importSettings(event) {
+  const file = event.target.files[0];
+  if (!file) {
+    console.log("No file selected for import.");
+    return;
+  }
+
+  // ★ インポート実行前にユーザーに確認
+  if (
+    !confirm(
+      "現在の設定がインポートする設定で上書きされます。よろしいですか？\n(※ ページがリロードされます)"
+    )
+  ) {
+    // ファイル選択をリセット
+    event.target.value = null;
+    return;
+  }
+
+  console.log(`Importing settings from file: ${file.name}`);
+  const reader = new FileReader();
+
+  reader.onload = (e) => {
+    try {
+      const jsonString = e.target.result;
+      const importedSettings = JSON.parse(jsonString);
+
+      // ★ バージョンチェック (将来的な互換性のため)
+      if (!importedSettings || importedSettings.version !== 1) {
+        throw new Error("無効な設定ファイル形式またはバージョンです。");
+      }
+
+      // ★ localStorageに各設定を書き込む
+      localStorage.setItem(
+        AppSettings.KEYS.CUSTOM_ENGINES,
+        importedSettings.customEngines || "{}"
+      );
+      localStorage.setItem(
+        AppSettings.KEYS.DELETED_BUILTIN,
+        importedSettings.deletedBuiltinEngines || "[]"
+      );
+      localStorage.setItem(
+        AppSettings.KEYS.SPEED_DIAL,
+        importedSettings.speedDialData || "[]"
+      );
+      localStorage.setItem(
+        AppSettings.KEYS.COLUMNS,
+        importedSettings.speedDialColumns || "4"
+      );
+      localStorage.setItem(
+        AppSettings.KEYS.FAVICONS,
+        importedSettings.faviconsCache || "{}"
+      );
+      // 他の設定項目があればここに追加
+
+      console.log("Settings imported successfully.");
+      alert(
+        "設定がインポートされました。ページをリロードして変更を適用します。"
+      );
+
+      // ★ 変更を確実に反映させるためにページをリロード
+      location.reload();
+    } catch (error) {
+      console.error("Error importing settings:", error);
+      alert(`設定のインポート中にエラーが発生しました:\n${error.message}`);
+    } finally {
+      // ファイル選択をリセット (同じファイルを再度選択できるように)
+      event.target.value = null;
+    }
+  };
+
+  reader.onerror = (e) => {
+    console.error("Error reading settings file:", e);
+    alert("設定ファイルの読み込みに失敗しました。");
+    event.target.value = null;
+  };
+
+  // ファイルをテキストとして読み込む
+  reader.readAsText(file);
+}
 
 const state = {
   selectedSuggestionIndex: -1,
@@ -281,6 +684,9 @@ const elements = {
   helpButton: document.getElementById("helpButton"),
   helpContent: document.getElementById("helpContent"),
   manageEnginesButton: document.getElementById("manageEngines"),
+  exportSettingsButton: document.getElementById("exportSettingsButton"),
+  importSettingsButton: document.getElementById("importSettingsButton"),
+  importSettingsFile: document.getElementById("importSettingsFile"),
   engineModal: document.getElementById("engineModal"),
   engineList: document.getElementById("engineList"),
   engineNicknameInput: document.getElementById("engineNickname"),
@@ -391,7 +797,7 @@ function setupEventListeners() {
           じ: "ji",
           ぢ: "ji",
           ず: "zu",
-          づ: "zu", // or づ: 'du'
+          づ: "du", // or づ: 'zu'
           ふ: "fu",
         },
       };
@@ -652,6 +1058,27 @@ function setupEventListeners() {
   document.addEventListener("visibilitychange", handleVisibilityChange);
 }
 
+// ★ 設定エクスポートボタンのリスナー
+if (elements.exportSettingsButton) {
+  elements.exportSettingsButton.addEventListener("click", () => {
+    exportSettings();
+    closeSettingsPanel(); // パネルを閉じる
+  });
+}
+
+// ★ 設定インポートボタンのリスナー (ファイル選択をトリガー)
+if (elements.importSettingsButton) {
+  elements.importSettingsButton.addEventListener("click", () => {
+    triggerImport();
+    closeSettingsPanel(); // パネルを閉じる
+  });
+}
+
+// ★ ファイル選択インプットのリスナー (ファイルが選ばれたらインポート処理)
+if (elements.importSettingsFile) {
+  elements.importSettingsFile.addEventListener("change", importSettings);
+}
+
 function toggleSettingsPanel() {
   const isVisible = elements.settingsPanel.classList.toggle("visible");
   if (isVisible) {
@@ -701,77 +1128,70 @@ function updateActionButtonState() {
  * 検索ボックスの内容に基づいて現在のエンジン表示を更新する
  */
 function updateCurrentEngineDisplay() {
-  if (!elements.currentEngineDisplay) return;
+  const currentEngine = AppSettings.getCurrentEngine();
+  const engineData = AppSettings.values.engines[currentEngine];
+  const defaultIconPath = "icons/default-search.svg"; // ★ デフォルトアイコンのパス (例)
 
-  const input = elements.searchInput.value;
-  const parts = input.split(" ");
-  const potentialNickname = parts[0].toLowerCase();
-  let displayEngineKey = "g"; // デフォルトは Google
+  if (engineData && elements.currentEngineIcon) {
+    // 1. エンジン設定から iconUrl を取得
+    let iconSrc = engineData.iconUrl;
 
-  // 入力があり、最初の部分が有効なエンジンニックネームで、検索語句もある場合
-  if (
-    input.trim() &&
-    AppSettings.values.engines[potentialNickname] &&
-    parts.length > 1
-  ) {
-    displayEngineKey = potentialNickname;
-  }
-  // 入力がニックネームのみの場合も、そのエンジンを表示する（スペースなしでも）
-  else if (
-    AppSettings.values.engines[potentialNickname] &&
-    parts.length === 1
-  ) {
-    displayEngineKey = potentialNickname;
-  }
+    // 2. iconUrl がない場合、ビルトイン定義から取得 (ただし推奨しない場合も)
+    //    カスタム設定を優先するため、一旦コメントアウト。必要なら復活させる。
+    // if (!iconSrc && builtinEngines[currentEngine]) {
+    //     iconSrc = builtinEngines[currentEngine].iconUrl;
+    // }
 
-  const engineData = AppSettings.values.engines[displayEngineKey];
-  if (!engineData) {
-    console.warn("updateCurrentEngineDisplay: Default engine 'g' not found?");
-    return; // デフォルトエンジンが見つからない場合は何もしない
-  }
-
-  // アイコンまたはイニシャルを設定
-  // スピードダイアルと同様のアイコン取得ロジックを使う
-  // 注意: ここでは簡略化のため、エンジンのニックネーム自体を iconKey として favicons キャッシュを探す
-  // ★★★ engineData.iconUrl を使用 ★★★
-  const iconUrl = engineData.iconUrl;
-
-  if (iconUrl) {
-    // iconUrl が存在する場合
-    elements.currentEngineIcon.src = iconUrl;
-    elements.currentEngineIcon.alt = engineData.name;
-    elements.currentEngineIcon.style.display = "block";
-    elements.currentEngineInitial.style.display = "none";
-    // ★ エラーハンドリング (任意だが推奨)
-    elements.currentEngineIcon.onerror = () => {
-      console.warn(`Failed to load engine icon: ${iconUrl}`);
-      // エラー時はイニシャル表示にフォールバック
-      displayInitialIcon(
-        elements.currentEngineInitial,
-        elements.currentEngineIcon,
-        engineData.name
+    // 3. onerror ハンドラを先に設定 (無限ループ防止のため)
+    //    エラーが発生したら必ずデフォルトアイコンを表示し、再度のエラー発生を防ぐ
+    elements.currentEngineIcon.onerror = function () {
+      console.warn(
+        `Failed to load icon: ${this.src}. Falling back to default.`
       );
+      this.onerror = null; // ★ 再帰的なエラーを防ぐためにハンドラを削除
+      this.src = defaultIconPath;
+      this.style.display = "inline-block"; // デフォルトは表示
     };
-    elements.currentEngineIcon.onload = () => {
-      // 読み込み成功時は何もしない (onerrorをリセットするならここで)
-      // elements.currentEngineIcon.onerror = null;
-    };
-  } else {
-    // iconUrl がない場合はイニシャル表示
-    displayInitialIcon(
-      elements.currentEngineInitial,
-      elements.currentEngineIcon,
-      engineData.name
+
+    // 4. 有効な iconSrc があれば設定、なければデフォルトを設定
+    if (
+      iconSrc &&
+      (isValidHttpUrl(iconSrc) || iconSrc.startsWith("data:image"))
+    ) {
+      console.log(
+        `[updateCurrentEngineDisplay] Setting icon for ${currentEngine}: ${iconSrc}`
+      );
+      elements.currentEngineIcon.src = iconSrc;
+      elements.currentEngineIcon.style.display = "inline-block";
+    } else {
+      if (iconSrc) {
+        // 無効なURLが設定されていた場合
+        console.warn(
+          `[updateCurrentEngineDisplay] Invalid iconUrl for ${currentEngine}: ${iconSrc}. Using default.`
+        );
+      } else {
+        // iconUrl が未設定の場合
+        console.log(
+          `[updateCurrentEngineDisplay] No iconUrl for ${currentEngine}. Using default.`
+        );
+      }
+      // ★ iconUrl が無効または未設定の場合はデフォルトアイコンを使用
+      elements.currentEngineIcon.src = defaultIconPath;
+      elements.currentEngineIcon.style.display = "inline-block"; // デフォルトは表示
+      // この場合 onerror はトリガーされないはず (デフォルトパスが正しければ)
+    }
+  } else if (elements.currentEngineIcon) {
+    // エンジンデータが見つからない場合もデフォルト表示
+    console.warn(
+      `[updateCurrentEngineDisplay] Engine data not found for ${currentEngine}. Using default icon.`
     );
+    elements.currentEngineIcon.onerror = null; // ハンドラ削除
+    elements.currentEngineIcon.src = defaultIconPath;
+    elements.currentEngineIcon.style.display = "inline-block";
   }
 
-  // (任意) エンジン名を表示する場合
-  // if (elements.currentEngineName) {
-  //     elements.currentEngineName.textContent = engineData.name;
-  // }
-
-  // アクセシビリティ情報更新
-  elements.currentEngineDisplay.title = `現在のエンジン: ${engineData.name} (クリックで変更)`;
+  // ★ Feather アイコンの再描画が必要な場合 (デフォルトアイコンが SVG の場合など)
+  // feather.replace(); // 必要に応じて呼び出す
 }
 
 // ★ イニシャル表示用のヘルパー関数 (共通化のため)
@@ -954,263 +1374,134 @@ function updateSuggestions() {
 async function fetchSuggestions(query, engine) {
   console.log(`[fetchSuggestions] START - Engine: ${engine}, Query: ${query}`);
   const engineData = AppSettings.values.engines[engine];
-  if (!engineData) {
-    console.warn(`[fetchSuggestions] Engine not found: ${engine}`);
+
+  // --- エンジンデータまたはサジェストURLが存在しない場合は終了 ---
+  if (!engineData || !engineData.suggestUrl) {
+    console.log(
+      `[fetchSuggestions] No suggestion URL configured for engine: ${engine}`
+    );
     displaySuggestions([]);
     return;
   }
 
-  const useProxy =
-    (typeof engineData.suggestUrl === "string" &&
-      engineData.suggestUrl === engine) ||
-    PROXY_TARGET_URLS[engine];
-  const jsonpUrl =
-    !useProxy &&
-    typeof engineData.suggestUrl === "string" &&
-    engineData.suggestUrl.startsWith("http")
-      ? engineData.suggestUrl
-      : null;
-
-  console.log(
-    `[fetchSuggestions] DEBUG - useProxy: ${useProxy}, jsonpUrl: ${jsonpUrl}`
-  );
-
-  if (useProxy) {
-    console.log("[fetchSuggestions] Entering useProxy block");
-    // ★★★ SUGGEST_PROXY_URL のチェックを削除 ★★★
-    // if (!SUGGEST_PROXY_URL || SUGGEST_PROXY_URL.includes('your-proxy-name')) {
-    //    console.error("SUGGEST_PROXY_URL is not configured.");
-    //    displaySuggestions([]);
-    //    return;
-    // }
-
-    const targetApiUrl = PROXY_TARGET_URLS[engine];
-    if (!targetApiUrl) {
-      console.error(
-        `[fetchSuggestions] Target API URL for proxy engine '${engine}' not found in PROXY_TARGET_URLS.`
-      );
-      displaySuggestions([]);
-      // tryFallbackToJsonp(query, engine, 'Target URL not found'); // 必要ならフォールバック
-      return;
-    }
-
-    const encodedQuery = encodeURIComponent(query);
-    const encodedTargetUrl = encodeURIComponent(targetApiUrl);
-    // ★ proxyUrl は相対パスのまま
-    const proxyUrl = `/suggest?engine=${engine}&q=${encodedQuery}&target_url=${encodedTargetUrl}`;
-
-    console.log(`[fetchSuggestions] Fetching via proxy: ${proxyUrl}`);
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // タイムアウトを5秒に短縮 (任意)
-
-      const response = await fetch(proxyUrl, { signal: controller.signal });
-      clearTimeout(timeoutId);
+  // --- suggestUrl が有効なURLか基本的なチェック ---
+  let suggestApiUrl;
+  try {
+    suggestApiUrl = engineData.suggestUrl;
+    // 基本的には suggestUrl に完全なURLが入っているはずだが、
+    // ユーザー入力や古い設定のためにレガシーニックネームの場合も考慮
+    if (!isValidHttpUrl(suggestApiUrl) && !suggestApiUrl.startsWith("data:")) {
       console.log(
-        `[fetchSuggestions] Proxy fetch completed for ${engine}, Status: ${response.status}`
+        `[fetchSuggestions] suggestUrl '${suggestApiUrl}' is not a full URL, checking legacy map.`
       );
-
-      if (!response.ok) {
-        console.error(
-          `[fetchSuggestions] Proxy request failed: ${response.status} ${response.statusText}`
+      // ★ ユーザー指定のレガシー変換マップ
+      const legacyUrls = {
+        g: "https://suggestqueries.google.com/complete/search?client=firefox&hl=ja", // 日本語指定
+        gs: "https://suggestqueries.google.com/complete/search?client=firefox&hl=en", // 英語指定
+        b: "https://api.bing.com/osjson.aspx?query=", // 末尾に query= を付けておくのが親切かも
+        d: "https://duckduckgo.com/ac/?q=", // 末尾に q= を付けておくのが親切かも
+        // ★ 新しく追加したエンジンのニックネームもここに追加可能 (w, y, a)
+        w: builtinEngines.w.suggestUrl,
+        y: builtinEngines.y.suggestUrl,
+        a: builtinEngines.a.suggestUrl,
+      };
+      if (legacyUrls[suggestApiUrl]) {
+        console.warn(
+          `[fetchSuggestions] Legacy suggestUrl '${suggestApiUrl}' found, converting to full URL: ${legacyUrls[suggestApiUrl]}`
         );
-        const errorData = await response.json().catch(() => ({})); // エラー内容取得試行
-        console.error("[fetchSuggestions] Proxy error details:", errorData);
-        // ★ JSONPフォールバックは method 4 では不要になる可能性が高い
-        // tryFallbackToJsonp(query, engine, 'Proxy response not OK');
-        displaySuggestions([]); // エラー時は候補をクリア
-        return;
-      }
-      const data = await response.json();
-      console.log(
-        `[fetchSuggestions] Received proxy data for ${engine}, calling processSuggestionData...`
-      );
-      processSuggestionData(data, engine, query); // ★ dataを渡す
-    } catch (error) {
-      if (error.name === "AbortError") {
-        console.error(
-          `[fetchSuggestions] Proxy request explicit timeout for ${engine}`
-        );
+        suggestApiUrl = legacyUrls[suggestApiUrl];
+        // ★ 任意: 変換後のURLを保存する処理
+        // AppSettings.values.engines[engine].suggestUrl = suggestApiUrl;
+        // AppSettings.save();
       } else {
-        console.error(
-          `[fetchSuggestions] Error fetching suggestions via proxy for ${engine}:`,
-          error
+        // レガシーマップにもなければエラー
+        throw new Error(
+          `Invalid suggestUrl format or unknown legacy nickname: ${suggestApiUrl}`
         );
       }
-      // ★ JSONPフォールバックは method 4 では不要になる可能性が高い
-      // tryFallbackToJsonp(query, engine, error.name || 'Fetch error');
-      displaySuggestions([]); // エラー時は候補をクリア
-    } finally {
-      console.log("[fetchSuggestions] Exiting useProxy block");
     }
-  } else if (jsonpUrl) {
-    // ★ JSONP処理も method 4 では不要になる可能性が高い (プロキシ経由に統一できるため)
-    //    もし残すなら、この部分はそのまま
-    console.log(
-      "[fetchSuggestions] Using JSONP directly (no proxy configured)"
-    );
-    fetchSuggestionsViaJsonp(query, engine, jsonpUrl);
-  } else {
-    console.log(
-      `[fetchSuggestions] No suggestion support configured for engine: ${engine}`
-    );
-    displaySuggestions([]);
-  }
-  console.log(`[fetchSuggestions] END - Engine: ${engine}`);
-}
-
-function tryFallbackToJsonp(query, engine, errorReason) {
-  console.warn(
-    `[tryFallbackToJsonp] Proxy failed for ${engine} (Reason: ${errorReason}). Checking for JSONP fallback...`
-  );
-
-  let fallbackUrl = JSONP_FALLBACK_URLS[engine];
-  let isDefaultFallback = false;
-  if (!fallbackUrl && JSONP_FALLBACK_URLS["g"]) {
-    console.log(
-      `[tryFallbackToJsonp] No specific JSONP URL for ${engine}. Defaulting to Google JSONP fallback.`
-    );
-    fallbackUrl = JSONP_FALLBACK_URLS["g"];
-    isDefaultFallback = true;
-  }
-
-  if (fallbackUrl) {
-    let finalFallbackUrl = fallbackUrl;
-    if (fallbackUrl.includes("google.com/complete/search")) {
-      const targetLang = engine === "ge" ? "en" : "ja";
-      console.log(
-        `[tryFallbackToJsonp] Setting Google JSONP language (hl) to: ${targetLang}`
-      );
-      if (finalFallbackUrl.includes("hl=")) {
-        finalFallbackUrl = finalFallbackUrl.replace(
-          /hl=[a-z]{2}(&|$)/,
-          `hl=${targetLang}$1`
-        );
-      } else {
-        finalFallbackUrl +=
-          (finalFallbackUrl.includes("?") ? "&" : "?") + `hl=${targetLang}`;
-      }
-    }
-
-    const fallbackEngineName = isDefaultFallback
-      ? `${engine} (via Google)`
-      : engine;
-    console.log(
-      `[tryFallbackToJsonp] Attempting JSONP fallback for ${fallbackEngineName} using URL: ${finalFallbackUrl}`
-    );
-
-    activateFallbackIndicator(); // ★ インジケーター有効化
-
-    fetchSuggestionsViaJsonp(query, engine, finalFallbackUrl);
-  } else {
-    console.log(
-      `[tryFallbackToJsonp] No JSONP fallback available (including default Google) for ${engine}. Clearing suggestions.`
-    );
-    displaySuggestions([]);
-    deactivateFallbackIndicator(); // ★ インジケーター解除
-  }
-}
-
-function fetchSuggestionsViaJsonp(query, engine, jsonpUrlBase) {
-  console.log(`[fetchSuggestionsViaJsonp] Fetching via JSONP for ${engine}`);
-  const callbackName = `handleSuggestions_${engine}_${Date.now()}`;
-  let timedOut = false;
-  let timeoutId = null;
-
-  window[callbackName] = (data) => {
-    if (timedOut) return;
-    clearTimeout(timeoutId);
-    console.log(
-      `[fetchSuggestionsViaJsonp] JSONP callback executed for ${engine}`
-    );
-    processSuggestionData(data, engine, query);
-    try {
-      delete window[callbackName];
-      const script = document.getElementById(callbackName);
-      if (script && script.parentNode) script.parentNode.removeChild(script);
-    } catch (e) {
-      console.warn("[fetchSuggestionsViaJsonp] JSONP Cleanup E:", e);
-    }
-  };
-
-  const script = document.createElement("script");
-  script.id = callbackName;
-  let fullSuggestUrl = jsonpUrlBase;
-  const encodedQuery = encodeURIComponent(query);
-  let queryParam = "q";
-  let callbackParam = "callback";
-
-  if (jsonpUrlBase.includes("google.com/complete/search")) {
-    queryParam = "q";
-    callbackParam = "jsonp";
-  } else if (jsonpUrlBase.includes("wikipedia.org")) {
-    queryParam = "search";
-    callbackParam = "callback";
-  }
-
-  fullSuggestUrl +=
-    (jsonpUrlBase.includes("?") ? "&" : "?") + `${queryParam}=${encodedQuery}`;
-  fullSuggestUrl += `&${callbackParam}=${callbackName}`;
-
-  console.log(
-    `[fetchSuggestionsViaJsonp] Constructed JSONP URL: ${fullSuggestUrl}`
-  );
-  script.src = fullSuggestUrl;
-
-  script.onerror = (e) => {
-    if (timedOut) return;
-    clearTimeout(timeoutId);
+  } catch (error) {
     console.error(
-      `[fetchSuggestionsViaJsonp] JSONP request failed for ${engine}:`,
+      `[fetchSuggestions] Invalid or missing suggestUrl for engine ${engine}:`,
+      engineData.suggestUrl,
+      error.message
+    );
+    displaySuggestions([]);
+    return;
+  }
+
+  // --- プロキシ経由でリクエストを実行 ---
+  console.log("[fetchSuggestions] Using proxy for suggestion request.");
+  const encodedQuery = encodeURIComponent(query);
+
+  // ★★★ suggestApiUrl からベースURLを抽出する ★★★
+  let baseSuggestApiUrl;
+  try {
+    const tempUrl = new URL(suggestApiUrl);
+    // クエリパラメータ 'q' を削除 (他のパラメータは保持)
+    tempUrl.searchParams.delete("q");
+    // 他の一般的なクエリパラメータ名も削除候補 (例: 'query', 'term')
+    tempUrl.searchParams.delete("query");
+    tempUrl.searchParams.delete("term");
+    // 末尾のスラッシュがあれば削除する (任意だが統一のため)
+    baseSuggestApiUrl = tempUrl.toString().replace(/\/$/, "");
+    console.log(
+      `[fetchSuggestions] Extracted base suggest URL: ${baseSuggestApiUrl}`
+    );
+  } catch (e) {
+    console.error(
+      `[fetchSuggestions] Failed to parse suggestApiUrl to extract base URL: ${suggestApiUrl}`,
       e
     );
-    displaySuggestions([]);
-    try {
-      delete window[callbackName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-    } catch (cleanErr) {
-      console.warn(
-        "[fetchSuggestionsViaJsonp] JSONP Error Cleanup Err:",
-        cleanErr
+    // エラー時は元のURLをそのまま使う (サーバー側でのエラーになる可能性)
+    baseSuggestApiUrl = suggestApiUrl;
+  }
+
+  // ★★★ エンコードするのは抽出したベースURL ★★★
+  const encodedTargetUrl = encodeURIComponent(baseSuggestApiUrl);
+  const proxyUrl = `/suggest?engine=${engine}&q=${encodedQuery}&target_url=${encodedTargetUrl}`;
+
+  console.log(`[fetchSuggestions] Fetching via proxy: ${proxyUrl}`);
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒タイムアウト
+
+    const response = await fetch(proxyUrl, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    console.log(
+      `[fetchSuggestions] Proxy fetch completed for ${engine}, Status: ${response.status}`
+    );
+
+    if (!response.ok) {
+      console.error(
+        `[fetchSuggestions] Proxy request failed: ${response.status} ${response.statusText}`
+      );
+      const errorData = await response.json().catch(() => ({}));
+      console.error("[fetchSuggestions] Proxy error details:", errorData);
+      displaySuggestions([]); // エラー時は候補をクリア
+      return;
+    }
+    const data = await response.json();
+    console.log(
+      `[fetchSuggestions] Received proxy data for ${engine}, calling processSuggestionData...`
+    );
+    processSuggestionData(data, engine, query); // 取得データを処理
+  } catch (error) {
+    if (error.name === "AbortError") {
+      console.error(
+        `[fetchSuggestions] Proxy request explicit timeout for ${engine}`
+      );
+    } else {
+      console.error(
+        `[fetchSuggestions] Error fetching suggestions via proxy for ${engine}:`,
+        error
       );
     }
-  };
-
-  document.body.appendChild(script);
-  console.log(`[fetchSuggestionsViaJsonp] JSONP script appended for ${engine}`);
-
-  timeoutId = setTimeout(() => {
-    timedOut = true;
-    if (window[callbackName]) {
-      console.warn(
-        `[fetchSuggestionsViaJsonp] ★★★ JSONP Timeout occurred for ${engine} ★★★`
-      );
-      window[callbackName] = () => {
-        console.log(
-          `[fetchSuggestionsViaJsonp] Dummy callback called for timed out JSONP ${engine}`
-        );
-      };
-      try {
-        const script = document.getElementById(callbackName);
-        if (script && script.parentNode) script.parentNode.removeChild(script);
-        console.log(
-          `[fetchSuggestionsViaJsonp] Cleaned up timed out script for ${engine}`
-        );
-      } catch (cleanErr) {
-        console.warn(
-          "[fetchSuggestionsViaJsonp] JSONP Timeout Clean Err:",
-          cleanErr
-        );
-      }
-      const current = getCurrentEngineAndQuery();
-      if (current.engine === engine && current.query === query) {
-        displaySuggestions([]);
-      }
-    }
-  }, 5000);
-  console.log(
-    `[fetchSuggestionsViaJsonp] JSONP timeout set for ${engine} (ID: ${timeoutId})`
-  );
+    displaySuggestions([]); // エラー時は候補をクリア
+  } finally {
+    console.log("[fetchSuggestions] Exiting fetchSuggestions block");
+  }
+  // ★ JSONP関連の else if や tryFallbackToJsonp は削除
 }
 
 function getCurrentEngineAndQuery() {
@@ -1228,55 +1519,94 @@ function getCurrentEngineAndQuery() {
 }
 
 function processSuggestionData(data, engine, query) {
-  console.log(`Processing suggestions for ${engine}:`, data);
   let suggestions = [];
+  console.log(`Processing suggestions for ${engine}:`, data);
+
   try {
-    if (
-      (engine === "g" || engine === "ge" || engine === "y" || engine === "w") &&
-      Array.isArray(data) &&
-      Array.isArray(data[1])
-    ) {
-      suggestions = data[1].filter((s) => typeof s === "string");
-    } else if (
-      (engine === "b" || engine === "d") &&
-      Array.isArray(data) &&
-      Array.isArray(data[1])
-    ) {
-      suggestions = data[1].filter((s) => typeof s === "string");
-    } else if (
-      (engine === "b" || engine === "d") &&
-      Array.isArray(data) &&
-      data.length > 0 &&
-      typeof data[0] === "object" &&
-      data[0] !== null &&
-      "phrase" in data[0]
-    ) {
-      suggestions = data.map((item) => item.phrase).filter(Boolean);
-    } else {
-      console.warn(
-        `Unexpected or unhandled suggestion data format for ${engine}:`,
-        data
-      );
-      if (Array.isArray(data)) {
-        suggestions = data.filter((s) => typeof s === "string");
+    // --- エンジンごとの形式処理 ---
+    // ★ Google (g, ge, gsなど), Bing (b), Wikipedia (w) - 共通形式 ["query", [results], ...]
+    if (["g", "ge", "gs", "b", "w"].includes(engine)) {
+      if (Array.isArray(data) && data.length > 1 && Array.isArray(data[1])) {
+        suggestions = data[1]; // ★ 正しくサジェスト配列を取得
+      } else {
+        console.warn(
+          `Unexpected Google/Bing/Wikipedia format for ${engine}:`,
+          data
+        );
       }
     }
-  } catch (e) {
-    console.error("Error processing suggestion data:", e, data);
+    // ★ DuckDuckGo (d) - [{"phrase": "suggestion"}, ...]
+    else if (engine === "d") {
+      if (Array.isArray(data)) {
+        suggestions = data.map((item) => item.phrase).filter(Boolean);
+      } else {
+        console.warn(`Unexpected DuckDuckGo format for ${engine}:`, data);
+      }
+    }
+    // ★ 他のカスタムエンジン用の処理 (必要なら追加)
+    // else if (engine === 'amazon') { ... }
+
+    // --- 不明なエンジン/形式のフォールバック ---
+    else {
+      console.warn(
+        `Processing logic not defined for engine '${engine}'. Attempting generic extraction.`
+      );
+      // 汎用的な処理を試みる (より安全な方法)
+      if (Array.isArray(data)) {
+        if (
+          data.length > 1 &&
+          Array.isArray(data[1]) &&
+          typeof data[1][0] === "string"
+        ) {
+          suggestions = data[1]; // Google/Bing形式と仮定
+        } else if (data.every((item) => typeof item === "string")) {
+          suggestions = data; // 単純な文字列配列と仮定
+        } else if (
+          data.every(
+            (item) => typeof item === "object" && item !== null && item.phrase
+          )
+        ) {
+          suggestions = data.map((item) => item.phrase).filter(Boolean); // DDG形式と仮定
+        }
+      } else if (typeof data === "object" && data !== null) {
+        if (Array.isArray(data.suggestions)) suggestions = data.suggestions;
+        else if (Array.isArray(data.results)) suggestions = data.results;
+      }
+      // それでも抽出できなかった場合
+      if (suggestions.length === 0) {
+        console.warn(
+          `Could not extract suggestions using generic methods for ${engine}:`,
+          data
+        );
+      }
+    }
+
+    // ★ 以前の間違ったフォールバックを削除:
+    // if (suggestions.length === 0 && Array.isArray(data)) {
+    //     console.warn(`Unexpected or unhandled suggestion data format for ${engine}:`, data);
+    //     suggestions = [query]; // ← この行を削除！
+    // }
+  } catch (error) {
+    console.error(
+      `Error processing suggestion data for ${engine}:`,
+      error,
+      data
+    );
+    suggestions = []; // エラー時は常に空配列
   }
 
-  console.log(`Extracted suggestions for ${engine}:`, suggestions);
+  // --- サジェストリストの整形とキャッシュ、表示 ---
+  const maxSuggestions = 10;
+  const filteredSuggestions = suggestions.slice(0, maxSuggestions);
 
-  const cacheKey = `${engine}_${query}`;
-  cache.suggestions[cacheKey] = suggestions;
+  console.log(`Extracted suggestions for ${engine}:`, filteredSuggestions); // ★ ここで正しい配列が出るはず
 
-  const current = getCurrentEngineAndQuery();
+  // キャッシュに保存
+  const cacheKey = `${engine}:${query}`;
+  cache.suggestions[cacheKey] = filteredSuggestions;
 
-  if (current.engine === engine && current.query === query) {
-    displaySuggestions(suggestions);
-  } else {
-    console.log("Suggestion received, but input changed. Ignoring.");
-  }
+  // UIに表示
+  displaySuggestions(filteredSuggestions);
 }
 
 function displaySuggestions(suggestions) {
@@ -2214,6 +2544,7 @@ function openEngineModal() {
 
 function closeEngineModal() {
   elements.engineModal.classList.remove("visible");
+  state.editingEngine = null; // ★ 閉じる際にもリセットするのが安全
 }
 
 function renderEngineList() {
@@ -2281,11 +2612,14 @@ function openEditEngineModal(nickname) {
 }
 
 function addOrUpdateEngine() {
+  // ★★★ まず全ての入力値を取得する ★★★
   const newNickname = elements.engineNicknameInput.value.trim().toLowerCase();
   const name = elements.engineNameInput.value.trim();
   const url = elements.engineUrlInput.value.trim();
   const suggestUrl = elements.engineSuggestUrlInput.value.trim();
+  const iconUrl = elements.engineIconUrlInput.value.trim(); // ★ ここで取得する
 
+  // --- バリデーション ---
   if (!newNickname || !name || !url) {
     alert("ニックネーム、エンジン名、検索URLは必須です。");
     return;
@@ -2298,42 +2632,94 @@ function addOrUpdateEngine() {
     alert("検索URLには '%s' を含める必要があります。");
     return;
   }
-
+  // ★ アイコンURLの形式チェック (任意だが推奨)
   if (
-    state.editingEngine !== newNickname &&
-    AppSettings.values.engines[newNickname]
+    iconUrl &&
+    !isValidHttpUrl(iconUrl) &&
+    !iconUrl.startsWith("data:image")
+  ) {
+    alert(
+      "アイコンURLの形式が正しくないようです。\nhttp://, https://, または data:image で始まる必要があります。"
+    );
+    return;
+  }
+
+  // --- ニックネームの重複チェック (編集時を除く) ---
+  if (
+    state.editingEngine !== newNickname && // 編集中のニックネーム自体は許可
+    AppSettings.values.engines[newNickname] // 新しいニックネームが既に存在するか
   ) {
     alert(`ニックネーム '${newNickname}' は既に使用されています。`);
     return;
   }
 
+  // --- 新しいエンジンデータを作成 ---
   const newEngineData = {
     name,
     url,
+    // ★ 入力された suggestUrl をそのまま使う。空なら null ★
     suggestUrl: suggestUrl || null,
-    iconUrl: iconUrl || null, // 空なら null を保存
+    iconUrl: iconUrl || null,
   };
 
-  if (state.editingEngine && state.editingEngine !== newNickname) {
-    delete AppSettings.values.engines[state.editingEngine];
+  // --- エンジンデータの更新/追加ロジック ---
+  const isEditing = state.editingEngine !== null;
+  const originalNickname = state.editingEngine; // 元のニックネームを保持
+
+  const isBuiltinOriginal = !!builtinEngines[originalNickname]; // 元がビルトインか
+
+  if (isEditing) {
+    console.log(
+      `Editing existing engine. Original: ${originalNickname}, New: ${newNickname}, Was Builtin: ${isBuiltinOriginal}`
+    );
+    if (originalNickname === newNickname) {
+      // ニックネーム変更なし
+      AppSettings.values.engines[newNickname] = newEngineData;
+      console.log(`Engine updated (no nickname change): ${newNickname}`);
+    } else {
+      // ニックネーム変更あり
+      // 1. 新しいニックネームでデータを保存
+      AppSettings.values.engines[newNickname] = newEngineData;
+      // 2. 古いニックネームのエントリを内部状態から削除
+      if (AppSettings.values.engines[originalNickname]) {
+        delete AppSettings.values.engines[originalNickname];
+        console.log(
+          `Internal engine state updated, deleted old entry: ${originalNickname}`
+        );
+      }
+      // ★★★ 3. 元のニックネームがビルトインの場合、削除済みリストに追加 ★★★
+      if (
+        isBuiltinOriginal &&
+        !AppSettings.values.deletedBuiltinEngines.includes(originalNickname)
+      ) {
+        AppSettings.values.deletedBuiltinEngines.push(originalNickname);
+        console.log(`Added ${originalNickname} to deletedBuiltinEngines list.`);
+      }
+      console.log(`Engine updated (nickname changed): ${newNickname}`);
+    }
+  } else {
+    // 新規追加
+    AppSettings.values.engines[newNickname] = newEngineData;
+    console.log(`New engine added: ${newNickname}`);
   }
 
-  AppSettings.values.engines[newNickname] = newEngineData;
-
+  // --- 削除済みリストからの復帰処理 ---
+  // 新しいニックネームが削除済みリストにあれば復帰させる
   const indexInDeleted =
     AppSettings.values.deletedBuiltinEngines.indexOf(newNickname);
   if (indexInDeleted > -1) {
     AppSettings.values.deletedBuiltinEngines.splice(indexInDeleted, 1);
+    console.log(`Engine restored from deleted list: ${newNickname}`);
   }
 
-  AppSettings.save(); // AppSettings.save() は saveEngines() を呼ぶはず
-  AppSettings.loadEngines(); // ★ 変更を反映させるために再読み込み
+  // --- 保存と再描画 ---
+  AppSettings.save(); // ★ save() は更新された deletedBuiltinEngines も保存する
+  AppSettings.loadEngines(); // 再読み込みして最終状態を確認
 
-  renderEngineList(); // リスト更新
-  initHelpContent(); // ヘルプ更新
-  updateCurrentEngineDisplay(); // ★ 現在のエンジン表示も更新
-
-  closeEngineModal(); // モーダルを閉じる
+  renderEngineList();
+  initHelpContent();
+  updateCurrentEngineDisplay();
+  closeEngineModal();
 }
 
 function deleteEngine(nickname) {
