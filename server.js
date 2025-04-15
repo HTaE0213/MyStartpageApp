@@ -6,7 +6,7 @@ const cheerio = require("cheerio"); // ファビコン取得で使用
 // const fetch = require('node-fetch'); // Node.js v18未満の場合コメント解除
 
 const app = express();
-const port = process.env.PORT || 3000; // Render が指定するポート or ローカル用3000
+const port = process.env.PORT || 8000; // Render が指定するポート or ローカル用3000
 
 // --- ミドルウェア ---
 app.use(express.json()); // JSONボディパーサー (APIで必要なら)
