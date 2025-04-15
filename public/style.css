@@ -234,39 +234,22 @@ body {
 
 /* ★ 検索入力欄の左パディングを調整して、エンジン表示とかぶらないように */
 .search-input {
-  padding-left: 48px;
-  /* 左側にスペースを確保 */
-}
-
-.search-input {
   flex-grow: 1;
-  padding: 10px 115px 10px 12px;
-  /* ★ 右パディング調整 (ボタン3つ分想定) */
+  /* padding: 10px 126px 10px 48px; */ /* ← パディングは調整が必要 */
+  padding: 10px 12px 10px 12px;   /* ★ コンテナ内部のパディングに変更 (左右12px、上下10px) */
   font-size: 16px;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease,
-    outline-color 0.3s ease;
-  /* ★ outline-color も transition 対象に */
-  outline: 2px solid transparent;
-  /* ★ 通常時は透明なアウトラインを用意 */
-  outline-offset: 2px;
-  /* ★ アウトラインを少し外側に */
+  /* border: 1px solid var(--border-color); */ /* ★ border を削除 */
+  border: none;                         /* ★ 明示的に border: none を指定 */
+  /* border-radius: 8px; */               /* ★ border-radius はコンテナ側で管理 */
+  transition: color 0.3s ease, background-color 0.3s ease; /* ★ transition 対象を変更 */
+  outline: none;                        /* ★ outline を完全に削除 */
+  /* outline-offset: 2px; */             /* ★ outline-offset を削除 */
+  min-width: 0;
+  background-color: transparent;        /* ★ 背景色を透明に */
+  color: var(--text-color);             /* ★ 文字色を明示的に設定 */
+  width: 100%;                          /* ★ 幅を100%に (flex-grow と併用) */
 }
 
-/* ★ 通常のフォーカス時のスタイル (青色のアウトライン) */
-.search-input:focus {
-  border-color: var(--primary-color);
-  /* フォーカス時にボーダー色も変える (任意) */
-  outline-color: var(--primary-color);
-  /* ★ 通常フォーカスは設定した色 (例: グレー系) */
-}
-
-/* ★ フォールバック時に検索ボックスのアウトラインを変更するスタイル */
-.search-input.fallback-active {
-  outline-color: #e53935;
-  /* ★ 強い赤色のアウトライン */
-}
 
 .button {
   position: absolute;
@@ -418,7 +401,7 @@ body {
   border: 1px solid var(--border-color);
   border-top: none;
   border-radius: 0 0 8px 8px;
-  max-height: 50vh;
+  max-height: 80vh;
   overflow-y: auto;
   z-index: 10;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -1122,7 +1105,7 @@ body.edit-mode .speed-dial-item-buttons {
 
   .datetime-display {
     font-size: 1em;
-    padding-bottom: 8px;
+    padding-bottom: 0px;
   }
 
   .search-input {
