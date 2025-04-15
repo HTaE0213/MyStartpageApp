@@ -62,14 +62,30 @@ app.get("/suggest", async (req, res) => {
   // --- 2. target_url (ベースURL) の検証 ---
   let parsedUrl;
   const allowedProtocols = ["http:", "https:"];
+  // server.js の /suggest 内
   const allowedDomains = [
+    // 主要検索エンジン
     "suggestqueries.google.com",
     "www.google.com",
     "api.bing.com",
     "duckduckgo.com",
-    "ja.wikipedia.org", // Wikipedia (JA)
+    "api.search.yahoo.com", // Yahoo! JAPAN
+    "sug.search.yahoo.net", // Yahoo! USA
+    "suggestion.baidu.com", // Baidu
+    "suggest.yandex.com", // Yandex
+    "search.brave.com", // Brave Search
+
+    // 主要サイト
+    "ja.wikipedia.org",
+    "en.wikipedia.org", // Wikipedia (EN) も追加
     "completion.amazon.co.jp", // Amazon (JP)
-    // 他に許可したいドメインを追加
+    "completion.amazon.com", // Amazon (US)
+
+    // 今後使う可能性が比較的高そうなもの
+    "github.com",
+    "stackoverflow.com",
+
+    // 必要に応じて他のドメインを追加
   ];
 
   try {
