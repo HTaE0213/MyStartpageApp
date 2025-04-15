@@ -27,7 +27,7 @@
     <div class="help-content" id="helpContent">
         <h3>検索ショートカット</h3>
         <div class="shortcut-list"></div>
-        <p class="info">使用方法: ニックネーム + スペース + 検索語句</p>
+        <p class="info">使用方法: ニックネーム + スペース + 検索語句 (例: g cat videos)</p>
     </div>
 
     <div class="container">
@@ -48,8 +48,9 @@
                 <div id="engineSelectMenu" class="engine-select-menu" style="display: none;" role="listbox">
                     <!-- JSでエンジン項目を追加 -->
                 </div>
-                <input type="text" id="searchInput" class="search-input" placeholder="検索語句を入力 (例: g cat videos)"
-                    autofocus autocomplete="off" aria-label="検索キーワード" />
+                <input type="text" id="searchInput" class="search-input" placeholder="検索語句を入力" autofocus
+                    autocomplete="off" aria-label="検索キーワード" />
+                <!-- ★ プレースホルダーから例を削除 -->
                 <!-- ★ ローマ字変換ボタンを追加 -->
                 <button type="button" id="romajiButton" class="button romaji-button" title="ローマ字に変換"
                     aria-label="ローマ字変換">
@@ -80,7 +81,22 @@
                             <label for="columns">列数:</label>
                             <input type="number" id="columns" value="4" min="1" max="15" />
                         </div>
-                        <!-- ★ 項目を追加ボタンのセクションが削除された -->
+                        <hr class="panel-divider">
+                        <!-- ★★★ 設定のエクスポート/インポート機能を追加 ★★★ -->
+                        <div class="panel-section">
+                            <button id="exportSettingsButton" class="panel-button">
+                                <i data-feather="download"></i> 設定をエクスポート
+                            </button>
+                        </div>
+                        <div class="panel-section">
+                            <button id="importSettingsButton" class="panel-button">
+                                <i data-feather="upload"></i> 設定をインポート
+                            </button>
+                            <!-- 非表示のファイル入力 -->
+                            <input type="file" id="importSettingsFile" accept=".json" style="display: none;">
+                        </div>
+                        <!-- ★★★ ここまで追加 ★★★ -->
+                        <hr class="panel-divider">
                         <div class="panel-section">
                             <button id="manageEngines" class="panel-button">
                                 <i data-feather="tool"></i> エンジンを管理
