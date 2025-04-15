@@ -759,7 +759,7 @@ function updateDateTime() {
 function setupEventListeners() {
   elements.searchInput.addEventListener(
     "input",
-    debounce(updateSuggestions, 60)
+    debounce(updateSuggestions, 20)
   );
   elements.searchInput.addEventListener("focus", () => {
     if (elements.searchInput.value.trim()) updateSuggestions();
