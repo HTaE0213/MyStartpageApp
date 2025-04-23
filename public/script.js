@@ -813,6 +813,7 @@ const elements = {
   body: document.body,
   settingsButton: document.getElementById("settingsButton"),
   settingsPanel: document.getElementById("settingsPanel"),
+  mobileSearchFocusButton: document.getElementById("mobileSearchFocusButton"),
 };
 
 /**
@@ -909,19 +910,26 @@ function init() {
 
     feather.replace();
 
-    // ★ ページ読み込み後、検索ボックスにフォーカスを当てる
-    //   モバイルデバイスでソフトウェアキーボードが表示されやすくなる
-    //   ただし、ブラウザやOSの挙動により100%表示される保証はない
-    //   また、ユーザーの操作なしでのフォーカスはUXに影響する場合があるので注意
-    //   setTimeoutで少し遅延させることで、レンダリング後のフォーカス成功率を高める試み
+    // ★ ページ読み込み時の自動フォーカス処理を修正 (モバイルでは実行しない)
     setTimeout(() => {
-        if (elements.searchInput) { // 要素の存在を確認
-            elements.searchInput.focus({ preventScroll: true }); // preventScrollでフォーカス時のスクロールを防ぐ(任意)
-            console.log("Focused on search input on load.");
-        } else {
-            console.warn("Search input element not found during init focus attempt.");
+      const isMobile = window.matchMedia("(max-width: 768px)").matches; // CSSのブレークポイントと合わせる
+      if (!isMobile && elements.searchInput) {
+        // モバイルでない場合のみ自動フォーカスを試みる
+        try {
+          elements.searchInput.focus({ preventScroll: true });
+          console.log("Focused on search input on load (non-mobile).");
+        } catch (e) {
+          // サイレントモードのブラウザなど、フォーカスが失敗する場合がある
+          console.warn("Failed to focus search input automatically.", e);
         }
-    }, 100); // 100ミリ秒程度の遅延
+      } else if (isMobile) {
+        console.log("Auto-focus skipped on mobile.");
+      } else {
+        console.warn(
+          "Search input element not found during init focus attempt."
+        );
+      }
+    }, 100);
   });
 }
 
@@ -1237,6 +1245,17 @@ function setupEventListeners() {
     });
   } else {
     console.error("Container element not found for background click listener.");
+  }
+
+  // ★ モバイル用検索フォーカスボタンのリスナーを追加
+  if (elements.mobileSearchFocusButton) {
+    elements.mobileSearchFocusButton.addEventListener("click", () => {
+      if (elements.searchInput) {
+        elements.searchInput.focus();
+        // 必要であれば、フォーカス後に要素が見えるようにスクロール調整
+        // elements.searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
   }
 
   document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -1955,26 +1974,44 @@ function displaySuggestions(suggestions) {
 }
 
 function applySuggestionToBox(suggestion) {
-  const engineToUse = state.actualEngine; // サジェスト取得に使ったエンジンを取得
-
-  // ★★★ 常に「ニックネーム + スペース + サジェスト」で値を完全に設定する ★★★
+  const engineToUse = state.actualEngine;
   const newValue = `${engineToUse} ${suggestion}`;
   console.log(
-    `[applySuggestionToBox] Setting input value to: "${newValue}" (Engine: ${engineToUse}, Suggestion: ${suggestion})`
+    `[applySuggestionToBox] Attempting to set value to: "${newValue}" (Engine: ${engineToUse}, Suggestion: ${suggestion})`
   );
+
+  // ★ 1. 一時的にフォーカスを外してIMEの状態リセットを試みる
+  elements.searchInput.blur();
+
+  // ★ 2. 値を設定
   elements.searchInput.value = newValue;
+  console.log(
+    `[applySuggestionToBox] Value set to: "${elements.searchInput.value}"`
+  ); // ★ 設定直後の値を確認
 
-  elements.searchInput.focus(); // フォーカス
-  // カーソルを末尾に移動
-  elements.searchInput.selectionStart = elements.searchInput.selectionEnd =
-    elements.searchInput.value.length;
-  elements.suggestionsContainer.style.display = "none"; // サジェスト非表示
-  state.originalInputValue = elements.searchInput.value; // 元の値として記憶
-  updateClearButtonVisibility();
-  updateActionButtonState();
+  // ★ 3. 少し遅延させてから再度フォーカスし、後続処理を実行
+  //    setTimeout を使うことで、blur() や値の反映が確実に行われるのを待つ意図もある
+  setTimeout(() => {
+    try {
+      elements.searchInput.focus(); // フォーカスを戻す
+      // フォーカスがないと selectionStart/End の設定でエラーになることがあるため、フォーカス後に移動
+      elements.searchInput.selectionStart = elements.searchInput.selectionEnd =
+        elements.searchInput.value.length; // カーソルを末尾に移動
+    } catch (e) {
+      console.warn("Error during refocus or setting selection range:", e);
+    }
 
-  // ★ 検索ボックスの値が更新された後、明示的にサジェスト更新をトリガーする
-  updateSuggestions();
+    elements.suggestionsContainer.style.display = "none"; // サジェスト非表示
+    state.originalInputValue = elements.searchInput.value; // 元の値として記憶
+    updateClearButtonVisibility();
+    updateActionButtonState();
+
+    // ★ 4. 全ての処理が終わった後にサジェスト更新をトリガー
+    updateSuggestions();
+    console.log(
+      "[applySuggestionToBox] Refocus and updateSuggestions completed."
+    );
+  }, 50); // 50ミリ秒程度の遅延（環境に応じて調整が必要な場合あり）
 }
 
 function executeSearchWithSuggestion(suggestion) {
@@ -1999,38 +2036,99 @@ function executeSearch() {
   const input = elements.searchInput.value.trim();
   if (!input) return;
 
+  // ★★★ URL形式かどうかの判定処理を追加 ★★★
+  // processClipboard と同様のロジックを使用
+  const isUrlLikely =
+    /^(https?:\/\/|www\.)/i.test(input) || // http://, https://, www. で始まる
+    (input.includes(".") &&
+      !input.includes(" ") &&
+      !input.startsWith("localhost")); // スペースを含まず . を含み、localhost以外 (ローカル開発用ファイルパス等を除外)
+
+  if (isUrlLikely) {
+    let urlToNavigate = input;
+    // 'www.' で始まる場合やプロトコルがない場合に 'https://' を補完
+    if (!input.startsWith("http://") && !input.startsWith("https://")) {
+      urlToNavigate = "https://" + input;
+    }
+    console.log(
+      "[executeSearch] Input detected as URL, navigating to:",
+      urlToNavigate
+    );
+    try {
+      // ★ 念のため、URLとして有効か最終チェック (無効なら検索にフォールバック)
+      new URL(urlToNavigate); // これがエラーを投げなければ有効な形式
+      window.location.href = urlToNavigate;
+      return; // URLへ遷移したのでここで終了
+    } catch (e) {
+      console.warn(
+        "[executeSearch] Input looked like URL but failed validation, proceeding with search:",
+        e.message
+      );
+      // URLの形式が無効だった場合は、通常の検索処理に進む
+    }
+  }
+
+  // --- URL形式でない場合、またはURL検証でエラーになった場合の検索処理 ---
+  console.log(
+    "[executeSearch] Input is not a URL or validation failed, proceeding with search for:",
+    input
+  );
   const parts = input.split(" ");
   const nickname = parts[0].toLowerCase();
   const searchTerms = parts.slice(1).join(" ");
 
   let searchUrl = "";
-  let targetEngine = AppSettings.getDefaultSearchEngine(); // ★ デフォルト検索エンジンを取得
+  let targetEngine = AppSettings.getDefaultSearchEngine(); // デフォルト検索エンジンを取得
 
+  // ニックネーム指定があり、かつ検索語句がある場合
   if (AppSettings.values.engines[nickname] && searchTerms) {
-    // ニックネーム指定がある場合
     targetEngine = nickname;
     searchUrl = AppSettings.values.engines[nickname].url.replace(
       /%s/g,
       encodeURIComponent(searchTerms)
     );
-  } else {
-    // ニックネーム指定がない場合 (デフォルトエンジンを使用)
+    console.log(
+      `[executeSearch] Using engine '${targetEngine}' for terms: '${searchTerms}'`
+    );
+  }
+  // ニックネーム指定がない、またはニックネームのみの場合 (入力全体を検索)
+  else {
+    // デフォルトエンジンが有効か確認
     if (AppSettings.values.engines[targetEngine]) {
       searchUrl = AppSettings.values.engines[targetEngine].url.replace(
         /%s/g,
-        encodeURIComponent(input) // ★ 入力全体を検索語句とする
+        encodeURIComponent(input) // 入力全体を検索語句とする
+      );
+      console.log(
+        `[executeSearch] Using default engine '${targetEngine}' for input: '${input}'`
       );
     } else {
-      // デフォルトエンジンが見つからない場合のフォールバック (ほぼ起こらないはず)
-      console.error("Default search engine not found!");
-      const fallbackUrl = builtinEngines["g"].url; // Googleにフォールバック
-      searchUrl = fallbackUrl.replace(/%s/g, encodeURIComponent(input));
+      // デフォルトエンジンが見つからない場合のフォールバック
+      console.error(
+        "[executeSearch] Default search engine not found! Falling back to Google."
+      );
+      const fallbackEngineKey = "g"; // Googleをフォールバック先とする
+      if (builtinEngines[fallbackEngineKey]) {
+        targetEngine = fallbackEngineKey;
+        searchUrl = builtinEngines[fallbackEngineKey].url.replace(
+          /%s/g,
+          encodeURIComponent(input)
+        );
+      } else {
+        // Googleすら定義されていない最悪のケース
+        alert("デフォルトの検索エンジンが見つかりません。");
+        return; // 検索URLが生成できないので終了
+      }
     }
   }
 
+  // --- 生成された検索URLへ遷移 ---
   if (searchUrl) {
+    console.log("[executeSearch] Navigating to search URL:", searchUrl);
     window.location.href = searchUrl;
   } else {
+    // 通常ここには到達しないはずだが、念のため
+    console.error("[executeSearch] Failed to generate search URL.");
     alert("検索URLの生成に失敗しました。エンジン設定を確認してください。");
   }
 }
@@ -2138,64 +2236,107 @@ function updateSelectedSuggestion(suggestions) {
 
 // --- Clipboard Processing ---
 async function processClipboard() {
+  console.log("[processClipboard] Attempting to read clipboard..."); // ★ デバッグログ追加
+  console.log("[processClipboard] Current protocol:", location.protocol); // ★ プロトコル確認ログ
+
+  // --- HTTPS接続チェックを先に行う ---
+  if (location.protocol !== "https:") {
+    console.error("[processClipboard] Clipboard API requires HTTPS.");
+    alert(
+      "クリップボード機能を利用するには、安全な接続 (HTTPS) が必要です。\n現在の接続は " +
+        location.protocol +
+        " です。"
+    );
+    return; // HTTPSでない場合はここで処理終了
+  }
+
+  // --- クリップボードAPIの存在チェック ---
   if (!navigator.clipboard || !navigator.clipboard.readText) {
-    alert("クリップボードの読み取りがブラウザでサポートされていません。");
+    console.error("[processClipboard] Clipboard API (readText) not supported.");
+    alert("お使いのブラウザはクリップボードの読み取りに対応していません。");
     return;
   }
+
+  // --- クリップボード読み取り実行 ---
   try {
-    const text = await navigator.clipboard.readText();
-    if (!text) return; // Nothing on clipboard
+    console.log("[processClipboard] Calling navigator.clipboard.readText()..."); // ★ API呼び出し前ログ
+    const text = await navigator.clipboard.readText(); // ★ ここで権限要求が行われるはず
+    console.log("[processClipboard] Clipboard read successfully."); // ★ 成功ログ
+
+    if (!text) {
+      console.log("[processClipboard] Clipboard is empty.");
+      return; // クリップボードが空なら終了
+    }
 
     const trimmedText = text.trim();
-    // Basic URL detection (starts with http/https/www or contains '.' without spaces)
+    console.log("[processClipboard] Clipboard content:", trimmedText); // ★ 内容ログ
+
+    // --- URLかどうかの判定と処理 (変更なし) ---
     const isUrl =
       /^(https?:\/\/|www\.)/i.test(trimmedText) ||
       (trimmedText.includes(".") && !trimmedText.includes(" "));
 
     if (isUrl) {
-      // It looks like a URL, try to navigate
       let url = trimmedText;
       if (
         !trimmedText.startsWith("http://") &&
         !trimmedText.startsWith("https://")
       ) {
-        url = "https://" + trimmedText; // Assume https if protocol is missing
+        url = "https://" + trimmedText;
       }
-      console.log("Navigating to URL from clipboard:", url); // ★ ログ追加 (デバッグ用)
+      console.log("[processClipboard] Navigating to URL:", url);
       window.location.href = url;
     } else {
-      // Not a URL, treat as search term and execute search directly
-      console.log("Executing search with text from clipboard:", text); // ★ ログ追加 (デバッグ用)
-      // ★★★ 検索ボックスへの値設定を削除 ★★★
-      // elements.searchInput.value = text;
-
-      // Execute search using the default engine directly
+      console.log("[processClipboard] Treating as search term:", trimmedText);
       const defaultEngineKey = AppSettings.values.engines["g"]
         ? "g"
-        : Object.keys(AppSettings.values.engines)[0]; // デフォルトエンジンキーを取得 (Google優先)
+        : Object.keys(AppSettings.values.engines)[0];
       if (defaultEngineKey && AppSettings.values.engines[defaultEngineKey]) {
-        // ★★★ クリップボードのテキストを使って検索URLを生成 ★★★
         const searchUrl = AppSettings.values.engines[
           defaultEngineKey
-        ].url.replace(/%s/g, encodeURIComponent(text)); // Use 'text' directly from clipboard
-        console.log("Default search URL:", searchUrl); // ★ ログ追加 (デバッグ用)
-        window.location.href = searchUrl; // Navigate to search results
+        ].url.replace(/%s/g, encodeURIComponent(trimmedText)); // ★ trimmedText を使用
+        console.log(
+          "[processClipboard] Executing search with default engine:",
+          searchUrl
+        );
+        window.location.href = searchUrl;
       } else {
-        alert("デフォルトの検索エンジン (g) が設定されていません。"); // エラーメッセージを具体的に
+        console.error("[processClipboard] Default search engine not found.");
+        alert("デフォルトの検索エンジン (g) が設定されていません。");
       }
     }
   } catch (err) {
-    console.error("Clipboard read error:", err);
-    // Inform user about potential permission issues or HTTPS requirement
-    if (location.protocol !== "https:") {
-      alert(
-        "クリップボードへのアクセスは、安全な接続 (HTTPS) でのみ許可される場合があります。"
-      );
+    // --- エラーハンドリング ---
+    console.error(
+      "[processClipboard] Error reading clipboard:",
+      err.name,
+      err.message,
+      err
+    ); // ★ エラー詳細ログ
+    let message = "クリップボードの読み取りに失敗しました。";
+
+    if (err.name === "NotAllowedError") {
+      // ユーザーが許可しなかった場合、または設定でブロックされている可能性
+      message += "\nクリップボードへのアクセス許可が必要です。";
+      // モバイルの場合、ブラウザの設定やOSの設定を確認するよう促す
+      if (window.matchMedia("(max-width: 768px)").matches) {
+        message +=
+          "\nブラウザアプリの権限設定やOSのプライバシー設定を確認してください。";
+      } else {
+        message +=
+          "\nブラウザのアドレスバー付近に表示される権限アイコンを確認するか、サイト設定をご確認ください。";
+      }
+    } else if (err.name === "SecurityError") {
+      message +=
+        "\nセキュリティ上の理由でアクセスがブロックされました。ページがアクティブでない場合などに発生することがあります。";
     } else {
-      alert("クリップボードの読み取りに失敗しました。権限を確認してください。");
+      // その他のエラー (NotFoundError なども含む)
+      message += "\n予期せぬエラーが発生しました (" + err.name + ")。";
     }
+    alert(message);
   }
 }
+
 
 // --- Speed Dial Management ---
 function handleColumnsChange() {
