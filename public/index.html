@@ -39,7 +39,7 @@
                 <!-- ★★★ エンジン表示/選択ボタン ★★★ -->
                 <div id="currentEngineDisplay" class="current-engine-display" tabindex="0" role="button"
                     aria-haspopup="true" aria-expanded="false" title="検索エンジンを選択">
-                    <img id="currentEngineIcon" src="" alt="Engine Icon" class="current-engine-icon"
+                    <img id="currentEngineIcon" src="" alt="" class="current-engine-icon"
                         style="display: none;">
                     <span id="currentEngineInitial" class="current-engine-initial" style="display: none;">G</span>
                     <!-- <span id="currentEngineName" class="current-engine-name">Google</span> --> <!-- 名前表示は任意 -->
@@ -95,6 +95,9 @@
                             <!-- 非表示のファイル入力 -->
                             <input type="file" id="importSettingsFile" accept=".json" style="display: none;">
                         </div>
+                        <!-- ★★★ ここまで追加 ★★★ -->
+                        <hr class="panel-divider">
+                        <!-- ★★★ デフォルトエンジン設定を追加 ★★★ -->
                         <!-- ★★★ ここまで追加 ★★★ -->
                         <hr class="panel-divider">
                         <div class="panel-section">
@@ -182,6 +185,19 @@
             <div class="modal-content">
                 <h2>検索エンジンを管理</h2>
                 <ul id="engineList"></ul>
+                <div class="default-engine-settings modal-section"> <!-- modal-sectionクラス追加 -->
+                    <label for="defaultSearchEngineSelect">デフォルト検索:</label>
+                    <select id="defaultSearchEngineSelect" class="panel-select">
+                        <!-- JSでオプションを追加 -->
+                    </select>
+                </div>
+                <div class="default-engine-settings modal-section"> <!-- modal-sectionクラス追加 -->
+                    <label for="defaultSuggestEngineSelect">デフォルトサジェスト:</label>
+                    <select id="defaultSuggestEngineSelect" class="panel-select">
+                        <!-- JSでオプションを追加 -->
+                    </select>
+                </div>
+                <hr class="modal-divider"> <!-- 区切り線を追加 -->
                 <h3>新しいエンジンを追加/編集</h3>
                 <label for="engineNickname">ニックネーム:</label>
                 <input type="text" id="engineNickname" placeholder="例: g" required />
