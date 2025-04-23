@@ -1597,66 +1597,70 @@ function selectEngineFromMenu(nickname) {
 function updateSuggestions() {
   updateClearButtonVisibility();
   updateActionButtonState();
-  const input = elements.searchInput.value.trim();
-  state.originalInputValue = elements.searchInput.value; // 元の値を保存
+  const input = elements.searchInput.value; // trim() は後で行う
+  state.originalInputValue = input; // 元の値を保存
 
-  let query = input;
+  let query = input.trim(); // サジェストクエリ用はトリム
   let engineNicknameForSuggest = AppSettings.getDefaultSuggestEngine();
-  let engineNicknameForDisplay = AppSettings.getCurrentEngine(); // ★ 表示用デフォルトは選択中エンジン
+  // ★★★ 表示用エンジンを【デフォルト検索エンジン】で初期化 ★★★
+  let engineNicknameForDisplay = AppSettings.getDefaultSearchEngine();
   let searchTermsExist = false;
-  let detectedNickname = null; // ★ 検出されたニックネームを保持
+  let detectedNickname = null;
 
-  if (input) {
-    const parts = input.split(" ");
+  const trimmedInput = input.trim(); // ニックネーム判定用にトリム
+
+  if (trimmedInput) {
+    // ★ トリムした入力で判定
+    const parts = trimmedInput.split(" ");
     const potentialNickname = parts[0].toLowerCase();
 
     // 有効なニックネームか判定
     if (AppSettings.values.engines[potentialNickname]) {
-      detectedNickname = potentialNickname; // ★ ニックネームを検出
-      engineNicknameForDisplay = potentialNickname; // ★ 表示用エンジンを検出したものに
+      detectedNickname = potentialNickname;
+      // ★★★ ニックネームが検出された場合のみ、表示用エンジンをそれに設定 ★★★
+      engineNicknameForDisplay = potentialNickname;
 
+      // --- サジェスト用エンジンの決定ロジック (変更なし) ---
       if (parts.length > 1) {
-        // 検索語句もある場合
         searchTermsExist = true;
-        query = parts.slice(1).join(" ");
-
+        query = parts.slice(1).join(" "); // サジェストクエリ
         if (AppSettings.values.engines[potentialNickname].suggestUrl) {
           engineNicknameForSuggest = potentialNickname;
         } else {
-          query = input;
+          query = trimmedInput; // サジェストは入力全体でデフォルトエンジンから取得
           engineNicknameForSuggest = AppSettings.getDefaultSuggestEngine();
         }
       } else {
         // ニックネームのみ入力されている場合
         query = ""; // サジェストクエリは空
-        engineNicknameForSuggest = potentialNickname; // サジェストはそのエンジンで試す（空クエリで）
+        engineNicknameForSuggest = potentialNickname; // サジェストはそのエンジンで試す
       }
     } else {
       // ニックネーム指定がない場合
-      query = input;
+      query = trimmedInput; // サジェストクエリは入力全体
       engineNicknameForSuggest = AppSettings.getDefaultSuggestEngine();
-      // engineNicknameForDisplay は変更しない (選択中エンジンのまま)
+      // ★★★ 表示用エンジンは初期値 (デフォルト検索エンジン) のまま ★★★
     }
   } else {
     // 入力が空の場合
     elements.suggestionsContainer.style.display = "none";
     state.lastQuery = "";
-    // engineNicknameForDisplay は変更しない (選択中エンジンのまま)
+    // ★★★ 表示用エンジンは初期値 (デフォルト検索エンジン) のまま ★★★
   }
 
-  // ★★★ 判定したエンジンでアイコン表示を更新 ★★★
+  // ★★★ 確定した engineNicknameForDisplay でアイコン表示を更新 ★★★
   updateCurrentEngineDisplay(engineNicknameForDisplay);
 
   // --- サジェスト取得処理 ---
-  // (ニックネームのみの場合もサジェスト取得を試みるように変更)
-  if (input) {
+  if (trimmedInput) {
+    // ★ トリムした入力で判定
     // 検索語句があるか、ニックネーム指定がない場合にサジェスト取得
     if (searchTermsExist || detectedNickname === null) {
-      state.actualEngine = engineNicknameForSuggest;
+      state.actualEngine = engineNicknameForSuggest; // サジェスト取得に使うエンジン
       const cacheKey = `${engineNicknameForSuggest}:${query}`;
       if (state.lastQuery === query && cache.suggestions[cacheKey]) {
         displaySuggestions(cache.suggestions[cacheKey]);
-        return;
+        return; // キャッシュがあればそれを使う
       }
       state.lastQuery = query;
       fetchSuggestions(query, engineNicknameForSuggest);
@@ -1664,10 +1668,13 @@ function updateSuggestions() {
       // ニックネームのみ入力の場合はサジェスト非表示
       displaySuggestions([]);
       state.lastQuery = "";
-      state.actualEngine = engineNicknameForDisplay; // 実際のエンジンとしては認識
+      // ★ actualEngine は表示用と同じにする (検索実行時のため)
+      state.actualEngine = engineNicknameForDisplay;
     }
   } else {
     displaySuggestions([]); // 入力が空ならクリア
+    // ★ 入力が空の場合も actualEngine をデフォルト検索エンジンにリセット
+    state.actualEngine = AppSettings.getDefaultSearchEngine();
   }
 }
 
