@@ -1977,44 +1977,35 @@ function displaySuggestions(suggestions) {
 }
 
 function applySuggestionToBox(suggestion) {
-  const engineToUse = state.actualEngine;
+  const engineToUse = state.actualEngine; // サジェスト取得に使ったエンジンを取得
   const newValue = `${engineToUse} ${suggestion}`;
   console.log(
-    `[applySuggestionToBox] Attempting to set value to: "${newValue}" (Engine: ${engineToUse}, Suggestion: ${suggestion})`
+    `[applySuggestionToBox] Setting input value to: "${newValue}" (Engine: ${engineToUse}, Suggestion: ${suggestion})`
   );
 
-  // ★ 1. 一時的にフォーカスを外してIMEの状態リセットを試みる
-  elements.searchInput.blur();
+  // ★ blur() の呼び出しを削除
 
-  // ★ 2. 値を設定
+  // ★ 値を設定
   elements.searchInput.value = newValue;
-  console.log(
-    `[applySuggestionToBox] Value set to: "${elements.searchInput.value}"`
-  ); // ★ 設定直後の値を確認
 
-  // ★ 3. 少し遅延させてから再度フォーカスし、後続処理を実行
-  //    setTimeout を使うことで、blur() や値の反映が確実に行われるのを待つ意図もある
-  setTimeout(() => {
-    try {
-      elements.searchInput.focus(); // フォーカスを戻す
-      // フォーカスがないと selectionStart/End の設定でエラーになることがあるため、フォーカス後に移動
-      elements.searchInput.selectionStart = elements.searchInput.selectionEnd =
-        elements.searchInput.value.length; // カーソルを末尾に移動
-    } catch (e) {
-      console.warn("Error during refocus or setting selection range:", e);
-    }
+  // ★ フォーカスを維持（または再設定）し、カーソルを末尾に移動 (setTimeoutなしで実行)
+  try {
+    // 既にフォーカスがあるはずだが、念のため focus() を呼ぶ (必須ではないかもしれない)
+    elements.searchInput.focus();
+    // カーソルを末尾に移動
+    elements.searchInput.selectionStart = elements.searchInput.selectionEnd =
+      elements.searchInput.value.length;
+  } catch (e) {
+    console.warn("Error during focus or setting selection range:", e);
+  }
 
-    elements.suggestionsContainer.style.display = "none"; // サジェスト非表示
-    state.originalInputValue = elements.searchInput.value; // 元の値として記憶
-    updateClearButtonVisibility();
-    updateActionButtonState();
+  elements.suggestionsContainer.style.display = "none"; // サジェスト非表示
+  state.originalInputValue = elements.searchInput.value; // 元の値として記憶
+  updateClearButtonVisibility();
+  updateActionButtonState();
 
-    // ★ 4. 全ての処理が終わった後にサジェスト更新をトリガー
-    updateSuggestions();
-    console.log(
-      "[applySuggestionToBox] Refocus and updateSuggestions completed."
-    );
-  }, 50); // 50ミリ秒程度の遅延（環境に応じて調整が必要な場合あり）
+  // ★ 検索ボックスの値が更新された後、明示的にサジェスト更新をトリガーする
+  updateSuggestions();
 }
 
 function executeSearchWithSuggestion(suggestion) {
