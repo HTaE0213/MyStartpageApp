@@ -1977,35 +1977,40 @@ function displaySuggestions(suggestions) {
 }
 
 function applySuggestionToBox(suggestion) {
-  const engineToUse = state.actualEngine; // サジェスト取得に使ったエンジンを取得
+  const engineToUse = state.actualEngine;
   const newValue = `${engineToUse} ${suggestion}`;
   console.log(
     `[applySuggestionToBox] Setting input value to: "${newValue}" (Engine: ${engineToUse}, Suggestion: ${suggestion})`
   );
 
-  // ★ blur() の呼び出しを削除
-
-  // ★ 値を設定
+  // 値を設定
   elements.searchInput.value = newValue;
 
-  // ★ フォーカスを維持（または再設定）し、カーソルを末尾に移動 (setTimeoutなしで実行)
+  // ★★★ input イベントを手動で発火させる ★★★
+  // これにより、IMEや他のリスナーが値の変更を検知し、未確定文字がクリアされることを期待する
   try {
-    // 既にフォーカスがあるはずだが、念のため focus() を呼ぶ (必須ではないかもしれない)
+    const inputEvent = new Event("input", { bubbles: true, cancelable: true });
+    elements.searchInput.dispatchEvent(inputEvent);
+    console.log("[applySuggestionToBox] Dispatched input event.");
+  } catch (e) {
+    console.error("[applySuggestionToBox] Error dispatching input event:", e);
+  }
+  // ★★★ ここまで追加 ★★★
+
+  // フォーカスを維持し、カーソルを末尾に移動
+  try {
     elements.searchInput.focus();
-    // カーソルを末尾に移動
     elements.searchInput.selectionStart = elements.searchInput.selectionEnd =
       elements.searchInput.value.length;
   } catch (e) {
     console.warn("Error during focus or setting selection range:", e);
   }
 
-  elements.suggestionsContainer.style.display = "none"; // サジェスト非表示
-  state.originalInputValue = elements.searchInput.value; // 元の値として記憶
+  elements.suggestionsContainer.style.display = "none";
+  state.originalInputValue = elements.searchInput.value;
   updateClearButtonVisibility();
   updateActionButtonState();
-
-  // ★ 検索ボックスの値が更新された後、明示的にサジェスト更新をトリガーする
-  updateSuggestions();
+  updateSuggestions(); // サジェスト更新はイベント発火後の方が良いかもしれない
 }
 
 function executeSearchWithSuggestion(suggestion) {
