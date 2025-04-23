@@ -814,6 +814,7 @@ const elements = {
   settingsButton: document.getElementById("settingsButton"),
   settingsPanel: document.getElementById("settingsPanel"),
   mobileSearchFocusButton: document.getElementById("mobileSearchFocusButton"),
+  fetchTitleButton: document.getElementById("fetchTitleButton"),
 };
 
 /**
@@ -1247,13 +1248,16 @@ function setupEventListeners() {
     console.error("Container element not found for background click listener.");
   }
 
+  // ★ タイトル取得ボタンのリスナーを追加
+  if (elements.fetchTitleButton) {
+    elements.fetchTitleButton.addEventListener("click", handleFetchTitle); // ★ 専用のハンドラ関数を呼び出す
+  }
+
   // ★ モバイル用検索フォーカスボタンのリスナーを追加
   if (elements.mobileSearchFocusButton) {
     elements.mobileSearchFocusButton.addEventListener("click", () => {
       if (elements.searchInput) {
         elements.searchInput.focus();
-        // 必要であれば、フォーカス後に要素が見えるようにスクロール調整
-        // elements.searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     });
   }
@@ -1931,38 +1935,37 @@ function displaySuggestions(suggestions) {
     textSpan.className = "suggestion-text";
     textSpan.textContent = suggestionText;
 
-        const arrowButton = document.createElement("button");
-        arrowButton.className = "arrow-button";
-        arrowButton.innerHTML = '<i data-feather="arrow-right"></i>';
-        arrowButton.setAttribute("aria-label", "入力欄にコピー");
-        arrowButton.type = "button";
-        // ★ イベントを 'mousedown' に変更し、stopPropagation() を呼び出す
-        arrowButton.addEventListener("mousedown", (e) => {
-          e.stopPropagation(); // ★ 親要素(item)への mousedown イベントの伝播を停止
-          applySuggestionToBox(suggestionText);
-          // mousedown でフォーカスが外れるのを防ぐ (任意だがUX向上)
-          e.preventDefault();
-        });
-        // ★ 念のため、click イベントでも stopPropagation を行う (環境による差異吸収)
-        arrowButton.addEventListener("click", (e) => {
-          e.stopPropagation();
-          e.preventDefault(); // click のデフォルト動作も抑制
-        });
+    const arrowButton = document.createElement("button");
+    arrowButton.className = "arrow-button";
+    arrowButton.innerHTML = '<i data-feather="arrow-right"></i>';
+    arrowButton.setAttribute("aria-label", "入力欄にコピー");
+    arrowButton.type = "button";
+    // ★ イベントを 'mousedown' に変更し、stopPropagation() を呼び出す
+    arrowButton.addEventListener("mousedown", (e) => {
+      e.stopPropagation(); // ★ 親要素(item)への mousedown イベントの伝播を停止
+      applySuggestionToBox(suggestionText);
+      // mousedown でフォーカスが外れるのを防ぐ (任意だがUX向上)
+      e.preventDefault();
+    });
+    // ★ 念のため、click イベントでも stopPropagation を行う (環境による差異吸収)
+    arrowButton.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault(); // click のデフォルト動作も抑制
+    });
 
     item.appendChild(engineIndicator);
     item.appendChild(textSpan);
     item.appendChild(arrowButton);
 
-        item.addEventListener("mousedown", (event) => {
-          // ★ イベントを 'click' から 'mousedown' に変更
-          event.preventDefault(); // ★ デフォルトのmousedown動作（テキスト選択やフォーカス移動など）を抑制し、IME確定の妨げになる可能性を減らす
-          console.log(`Suggestion item mousedown: ${suggestionText}`); // デバッグ用ログ
-          // setTimeout は維持。mousedown の直後に実行されるようにする
-          setTimeout(() => {
-            executeSearchWithSuggestion(suggestionText);
-          }, 0);
-        });
-
+    item.addEventListener("mousedown", (event) => {
+      // ★ イベントを 'click' から 'mousedown' に変更
+      event.preventDefault(); // ★ デフォルトのmousedown動作（テキスト選択やフォーカス移動など）を抑制し、IME確定の妨げになる可能性を減らす
+      console.log(`Suggestion item mousedown: ${suggestionText}`); // デバッグ用ログ
+      // setTimeout は維持。mousedown の直後に実行されるようにする
+      setTimeout(() => {
+        executeSearchWithSuggestion(suggestionText);
+      }, 0);
+    });
 
     fragment.appendChild(item);
   });
@@ -2030,7 +2033,6 @@ function executeSearchWithSuggestion(suggestion) {
     );
   }
 }
-
 
 function executeSearch() {
   const input = elements.searchInput.value.trim();
@@ -2337,7 +2339,6 @@ async function processClipboard() {
   }
 }
 
-
 // --- Speed Dial Management ---
 function handleColumnsChange() {
   console.log("handleColumnsChange called"); // ★ 呼び出し確認
@@ -2429,24 +2430,31 @@ function createSpeedDialItem(data, index) {
   textSpan.textContent = data.name;
 
   let iconElement;
-  const faviconUrl = AppSettings.values.favicons[data.iconKey] || data.icon;
+  const iconSource = data.icon; // 保存されたアイコン情報 (URL or Data URL or null)
 
-  if (faviconUrl && faviconUrl.startsWith("data:image")) {
-    // 画像の場合のみ
+  // ★★★ アイコンソースが Data URL または 有効な HTTP/HTTPS URL の場合 ★★★
+  if (
+    iconSource &&
+    (iconSource.startsWith("data:image") || isValidHttpUrl(iconSource))
+  ) {
     iconElement = document.createElement("img");
-    iconElement.src = faviconUrl;
+    iconElement.src = iconSource; // ★ data.icon (URL or Data URL) を src に設定
     iconElement.alt = data.name;
     iconElement.loading = "lazy";
 
-    // ★★★ 保存された adjustment データに基づいて filter スタイルを適用 ★★★
-    const adj = data.adjustment || { hue: 0, saturate: 100, brightness: 100 }; // デフォルト値
+    // 保存された adjustment データに基づいて filter スタイルを適用
+    const adj = data.adjustment || { hue: 0, saturate: 100, brightness: 100 };
     iconElement.style.filter = `hue-rotate(${adj.hue}deg) saturate(${adj.saturate}%) brightness(${adj.brightness}%)`;
+
+    // エラー時のフォールバック
     iconElement.onerror = () => {
-      console.warn("Error loading speed dial icon:", faviconUrl);
-      iconElement.replaceWith(createInitialIcon(data.name));
+      console.warn("Error loading speed dial icon:", iconSource);
+      // ★ エラー時は、img要素自体をイニシャルアイコン要素に置き換える
+      const initialFallback = createInitialIcon(data.name);
+      iconElement.replaceWith(initialFallback); // replaceWith を使う
     };
   } else {
-    // 画像でない場合 (イニシャルなど)
+    // ★ アイコンソースがない、または無効な形式の場合はイニシャル表示
     iconElement = createInitialIcon(data.name);
     // イニシャルアイコンにはフィルターを適用しない
   }
@@ -2781,6 +2789,56 @@ async function fetchAndCacheFavicon() {
     console.error("Error in fetchAndCacheFavicon:", error);
     alert("アイコン取得中にエラーが発生しました。");
     elements.fetchFaviconButton.disabled = false;
+  }
+}
+
+/**
+ * ★ スピードダイアル編集モーダルの「タイトル取得」ボタンクリック時の処理
+ */
+async function handleFetchTitle() {
+  const urlInput = elements.siteUrlInput;
+  const nameInput = elements.siteNameInput;
+  const button = elements.fetchTitleButton;
+  const url = urlInput.value.trim();
+
+  if (!isValidHttpUrl(url)) {
+    alert("有効なURLを入力してください。");
+    return;
+  }
+
+  // ボタンを無効化し、スピナー表示（元のアイコンを一時的に保持）
+  const originalButtonContent = button.innerHTML;
+  button.disabled = true;
+  button.innerHTML = '<div class="spinner"></div>';
+
+  try {
+    console.log(`[handleFetchTitle] Fetching title for: ${url}`);
+    const fetchedTitle = await fetchTitleFromUrl(url); // 既存のタイトル取得関数を呼び出し
+
+    if (fetchedTitle) {
+      console.log(`[handleFetchTitle] Title fetched: ${fetchedTitle}`);
+      nameInput.value = fetchedTitle; // 取得したタイトルを入力欄に設定
+    } else {
+      console.warn(
+        "[handleFetchTitle] Failed to fetch title or title was empty."
+      );
+      // ユーザーにフィードバック（任意）
+      alert(
+        "タイトルを取得できませんでした。URLを確認するか、手動で入力してください。"
+      );
+    }
+  } catch (error) {
+    // fetchTitleFromUrl 内で既にコンソールエラーは出力されているはず
+    console.error(
+      "[handleFetchTitle] Error occurred during title fetch:",
+      error
+    );
+    alert("タイトルの取得中にエラーが発生しました。");
+  } finally {
+    // ボタンの状態を元に戻す
+    button.disabled = false;
+    button.innerHTML = originalButtonContent;
+    feather.replace(); // アイコン再描画
   }
 }
 
