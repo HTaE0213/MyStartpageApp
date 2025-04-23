@@ -33,8 +33,15 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  /* ★ 読みやすい日本語ゴシックとして游ゴシックを優先し、フォールバックを指定 */
+  font-family: "游ゴシック体", YuGothic, "游ゴシック Medium", "Yu Gothic Medium",
+    "游ゴシック", "Yu Gothic", "メイリオ", Meiryo,
+    /* Windows向けフォールバック */ "ヒラギノ角ゴ ProN W3",
+    "Hiragino Kaku Gothic ProN",
+    /* macOS向けフォールバック */ "ヒラギノ角ゴ Pro W3",
+    "Hiragino Kaku Gothic Pro", /* macOS向けフォールバック */ Roboto,
+    /* Android向け */ "Helvetica Neue", /* iOS向け */ Arial,
+    /* 欧文フォールバック */ sans-serif; /* 最終的な汎用サンセリフ */
   background-color: var(--bg-color);
   color: var(--text-color);
   display: flex;
@@ -80,6 +87,11 @@ body {
 .search-form {
   position: relative;
   margin-bottom: 15px;
+  /* ★ PC表示時の最大幅を設定 */
+  max-width: 650px; /* 例: 700px (お好みで調整してください) */
+  /* ★ フォーム自体を中央揃えにする */
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .search-input-container {
@@ -115,24 +127,24 @@ body {
 
 /* ★ エンジン表示部分のスタイル変更 ★★★ */
 .current-engine-display {
-  /* position: absolute 関係を削除 */
   display: flex;
   align-items: center;
   justify-content: center;
   width: 40px;
-  /* ★ 少し幅を広げる */
-  /* height は align-items: stretch で自動調整される */
   background-color: var(--highlight-color);
-  /* ★ 背景色を少し変える */
   border-radius: 7px 0 0 7px;
-  /* ★ 左側の角丸のみ */
   cursor: pointer;
   padding: 0 4px;
   transition: background-color 0.2s;
   border-right: 1px solid var(--border-color);
-  /* ★ 区切り線は維持 */
   flex-shrink: 0;
-  /* ★ 縮まないように */
+  /* ★ タッチ操作のデフォルト挙動を阻害しにくくする */
+  touch-action: manipulation;
+  /* ★ テキスト選択を無効化 */
+  user-select: none;
+  -webkit-user-select: none; /* Safari/iOS用 */
+  -moz-user-select: none; /* Firefox用 */
+  -ms-user-select: none; /* IE/Edge用 */
 }
 
 .current-engine-display:hover,
@@ -235,19 +247,16 @@ body {
 /* ★ 検索入力欄の左パディングを調整して、エンジン表示とかぶらないように */
 .search-input {
   flex-grow: 1;
-  /* padding: 10px 126px 10px 48px; */ /* ← パディングは調整が必要 */
-  padding: 10px 12px 10px 12px; /* ★ コンテナ内部のパディングに変更 (左右12px、上下10px) */
+  /* padding: 10px 12px 10px 12px; を修正 */
+  /* ★ 右パディングをボタン群の幅 + α (111px + α) に設定 */
+  padding: 10px 120px 10px 12px; /* 上 右 下 左 (右パディングを120pxに) */
   font-size: 16px;
-  /* border: 1px solid var(--border-color); */ /* ★ border を削除 */
-  border: none; /* ★ 明示的に border: none を指定 */
-  /* border-radius: 8px; */ /* ★ border-radius はコンテナ側で管理 */
-  transition: color 0.3s ease, background-color 0.3s ease; /* ★ transition 対象を変更 */
-  outline: none; /* ★ outline を完全に削除 */
-  /* outline-offset: 2px; */ /* ★ outline-offset を削除 */
+  border: none;
+  outline: none;
   min-width: 0;
-  background-color: transparent; /* ★ 背景色を透明に */
-  color: var(--text-color); /* ★ 文字色を明示的に設定 */
-  width: 100%; /* ★ 幅を100%に (flex-grow と併用) */
+  background-color: transparent;
+  color: var(--text-color);
+  width: 100%;
 }
 
 .button {
@@ -968,6 +977,42 @@ body.edit-mode .speed-dial-item-buttons {
   cursor: pointer;
 }
 
+/* --- モバイル用フォーカスボタン --- */
+#mobileSearchFocusButton {
+  display: none; /* デフォルト非表示 */
+  position: fixed;
+  bottom: 20px; /* 下からの基本位置 */
+  /* right: 20px; を削除 */
+  left: 50%; /* ★ 画面の左端から50%の位置に配置 */
+  transform: translateX(
+    -50%
+  ); /* ★ ボタン自身の幅の半分だけ左にずらして中央揃え */
+  width: 56px;
+  height: 56px;
+  /* background-color: var(--accent-color); を修正 (変数が未定義のため) */
+  background-color: var(
+    --primary-color
+  ); /* ★ primary-colorを使用 (または適切な色を指定) */
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  z-index: 1050; /* 他の要素より手前に */
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease-out; /* ホバー/アクティブ時のアニメーション用 */
+}
+
+#mobileSearchFocusButton:active {
+  transform: scale(0.95); /* クリック時の視覚フィードバック */
+}
+
+#mobileSearchFocusButton i {
+  width: 24px;
+  height: 24px;
+}
+
 @media (prefers-color-scheme: dark) {
   .current-engine-display:hover,
   .current-engine-display:focus {
@@ -1185,7 +1230,7 @@ body.edit-mode .speed-dial-item-buttons {
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 700px) {
   body {
     padding: 5px;
   }
@@ -1199,12 +1244,6 @@ body.edit-mode .speed-dial-item-buttons {
   .datetime-display {
     font-size: 1em;
     padding-bottom: 0px;
-  }
-
-  .search-input {
-    padding: 8px 110px 8px 10px;
-    /* ★ 右パディング調整 */
-    font-size: 14px;
   }
 
   /* ★ スマホでのボタン位置調整 */
@@ -1272,118 +1311,138 @@ body.edit-mode .speed-dial-item-buttons {
   }
 
   .search-input {
-    padding: 8px 110px 8px 10px;
-    /* ★ 左パディング調整、右はボタン分確保 */
+    /* padding: 8px 110px 8px 10px; を修正 (モバイルボタン配置に合わせて調整) */
+    /* モバイルのボタン配置: right: 70px (クリア) + width: 36px = 106px */
+    /* ★ 右パディングを 110px 程度に確保 */
+    padding: 8px 110px 8px 10px; /* 上 右 下 左 (現状維持で良さそう) */
     font-size: 14px;
   }
-}
 
-/* スピナーの簡単な例 */
-.spinner {
-  border: 4px solid rgba(var(--text-secondary-rgb), 0.1);
-  /* 薄い色の円 */
-  border-left-color: var(--text-primary);
-  /* 一部だけ濃い色 */
-  border-radius: 50%;
-  width: 24px;
-  /* アイコンプレビューのサイズに合わせる */
-  height: 24px;
-  animation: spin 1s linear infinite;
-  margin: auto;
-  /* 中央寄せ */
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+  /* スピナーの簡単な例 */
+  .spinner {
+    border: 4px solid rgba(var(--text-secondary-rgb), 0.1);
+    /* 薄い色の円 */
+    border-left-color: var(--text-primary);
+    /* 一部だけ濃い色 */
+    border-radius: 50%;
+    width: 24px;
+    /* アイコンプレビューのサイズに合わせる */
+    height: 24px;
+    animation: spin 1s linear infinite;
+    margin: auto;
+    /* 中央寄せ */
   }
-}
 
-/* ★ アイコン色調調整UIのスタイル */
-.icon-adjustment-controls {
-  font-size: 0.9em;
-}
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 
-.adjustment-slider {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-  gap: 8px;
-}
+  /* ★ アイコン色調調整UIのスタイル */
+  .icon-adjustment-controls {
+    font-size: 0.9em;
+  }
 
-.adjustment-slider label {
-  width: 50px;
-  /* ラベル幅を固定 */
-  margin-bottom: 0;
-  /* デフォルトのmarginを打ち消し */
-  font-weight: normal;
-  /* 少し細字に */
-  font-size: 0.95em;
-}
+  .adjustment-slider {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 8px;
+  }
 
-.adjustment-slider input[type="range"] {
-  flex-grow: 1;
-  height: 6px;
-  /* スライダーの高さを調整 */
-  cursor: pointer;
-  margin-bottom: 0;
-  /* デフォルトのmarginを打ち消し */
-}
+  .adjustment-slider label {
+    width: 50px;
+    /* ラベル幅を固定 */
+    margin-bottom: 0;
+    /* デフォルトのmarginを打ち消し */
+    font-weight: normal;
+    /* 少し細字に */
+    font-size: 0.95em;
+  }
 
-.adjustment-slider span {
-  width: 30px;
-  /* 数値表示幅を固定 */
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  /* 数字を等幅に */
-}
+  .adjustment-slider input[type="range"] {
+    flex-grow: 1;
+    height: 6px;
+    /* スライダーの高さを調整 */
+    cursor: pointer;
+    margin-bottom: 0;
+    /* デフォルトのmarginを打ち消し */
+  }
 
-/* ★ スピードダイアル追加ボタン(+)のスタイル */
-.add-button-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  /* アイコンを中央に */
-  text-align: center;
-  text-decoration: none;
-  color: var(--text-secondary);
-  /* やや薄い色 */
-  background-color: transparent;
-  /* 背景なし */
-  border: 2px dashed var(--border-color);
-  /* 点線枠 */
-  border-radius: 8px;
-  padding: 10px;
-  box-shadow: none;
-  /* 影なし */
-  transition: var(--transition);
-  cursor: pointer;
-  min-height: 90px;
-  /* 他のアイテムと高さを合わせる (要調整) */
-}
+  .adjustment-slider span {
+    width: 30px;
+    /* 数値表示幅を固定 */
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    /* 数字を等幅に */
+  }
 
-.add-button-item:hover {
-  border-color: var(--primary-color);
-  color: var(--primary-color);
-  background-color: var(--highlight-color);
-  transform: none;
-  /* ホバー時の浮き上がりはなし */
-}
+  /* ★ スピードダイアル追加ボタン(+)のスタイル */
+  .add-button-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    /* アイコンを中央に */
+    text-align: center;
+    text-decoration: none;
+    color: var(--text-secondary);
+    /* やや薄い色 */
+    background-color: transparent;
+    /* 背景なし */
+    border: 2px dashed var(--border-color);
+    /* 点線枠 */
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: none;
+    /* 影なし */
+    transition: var(--transition);
+    cursor: pointer;
+    min-height: 90px;
+    /* 他のアイテムと高さを合わせる (要調整) */
+  }
 
-.add-button-item svg {
-  width: 28px;
-  /* アイコンサイズ調整 */
-  height: 28px;
-  margin-bottom: 5px;
-  /* アイコンとテキストの間隔 */
-}
+  .add-button-item:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background-color: var(--highlight-color);
+    transform: none;
+    /* ホバー時の浮き上がりはなし */
+  }
 
-.add-button-item span {
-  font-size: 0.8rem;
-  line-height: 1.3;
-}
+  .add-button-item svg {
+    width: 28px;
+    /* アイコンサイズ調整 */
+    height: 28px;
+    margin-bottom: 5px;
+    /* アイコンとテキストの間隔 */
+  }
 
-.modal-divider {
-  border-top-color: #444;
+  .add-button-item span {
+    font-size: 0.8rem;
+    line-height: 1.3;
+  }
+
+  .modal-divider {
+    border-top-color: #444;
+  }
+
+  #mobileSearchFocusButton {
+    display: flex; /* モバイルでは表示 */
+  }
+
+  /* ★ ページ全体のコンテナやbodyに下部パディングを追加して、ボタンとコンテンツが重ならないようにする */
+  body,
+  .container {
+    /* 必要に応じて調整 */
+    /* ボタンの高さ + オフセット + セーフエリア */
+    padding-bottom: calc(56px + 20px + env(safe-area-inset-bottom, 0px));
+  }
+  /* ★ 上部ノッチ対応 */
+  body,
+  .container {
+    /* 必要に応じて調整 */
+    padding-top: env(safe-area-inset-top, 0px);
+  }
 }
