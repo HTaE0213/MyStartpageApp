@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="複数の検索エンジンを簡単に切り替えられるシンプルなスタートページ" />
     <!-- ★ viewport はどちらか一方で良い -->
-    <!-- <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" /> -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
     <title>検索スタートページ</title>
 
     <!-- ★ 外部CSSファイルを読み込む -->
@@ -39,8 +39,7 @@
                 <!-- ★★★ エンジン表示/選択ボタン ★★★ -->
                 <div id="currentEngineDisplay" class="current-engine-display" tabindex="0" role="button"
                     aria-haspopup="true" aria-expanded="false" title="検索エンジンを選択">
-                    <img id="currentEngineIcon" src="" alt="" class="current-engine-icon"
-                        style="display: none;">
+                    <img id="currentEngineIcon" src="" alt="" class="current-engine-icon" style="display: none;">
                     <span id="currentEngineInitial" class="current-engine-initial" style="display: none;">G</span>
                     <!-- <span id="currentEngineName" class="current-engine-name">Google</span> --> <!-- 名前表示は任意 -->
                 </div>
@@ -222,6 +221,10 @@
                 </div>
             </div>
         </div>
+
+        <button id="mobileSearchFocusButton" class="mobile-only" aria-label="検索ボックスにフォーカス">
+            <i data-feather="search"></i>
+        </button>
 
         <!-- ★ 外部JavaScriptファイルを読み込む (defer推奨) -->
         <script src="script.js" defer></script>
