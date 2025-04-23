@@ -2931,12 +2931,18 @@ function closeModal() {
 }
 
 function deleteSpeedDial(index) {
+  // ★ 削除対象が存在するか念のため確認
+  if (!AppSettings.values.speedDial || !AppSettings.values.speedDial[index]) {
+    console.error(`[deleteSpeedDial] Item at index ${index} not found.`);
+    return;
+  }
+
   if (
     confirm(`「${AppSettings.values.speedDial[index].name}」を削除しますか？`)
   ) {
-    AppSettings.values.speedDial.splice(index, 1);
-    AppSettings.setSpeedDial(AppSettings.values.speedDial);
-    renderSpeedDial();
+    AppSettings.values.speedDial.splice(index, 1); // 配列から削除
+    AppSettings.save(); // ★ 変更を localStorage に保存する
+    renderSpeedDial(); // UIを再描画
   }
 }
 
