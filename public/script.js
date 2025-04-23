@@ -751,7 +751,6 @@ const state = {
   currentAdjustment: { hue: 0, saturate: 100, brightness: 100 },
   longPressTimerId: null, // ★ 長押しタイマーのID
   longPressTriggeredEdit: false, // ★ 長押しで編集モードに入ったかどうかのフラグ
-  isComposing: false, // ★ IME入力中フラグを追加
 };
 
 // --- DOM Elements ---
@@ -962,37 +961,13 @@ function setupEventListeners() {
   elements.searchInput.addEventListener("keydown", handleKeyboardNavigation);
   elements.searchInput.addEventListener("blur", () => {
     setTimeout(() => {
-      // フォーカスがサジェストコンテナ以外に移った場合
       if (
         elements.suggestionsContainer.style.display !== "block" ||
         !elements.suggestionsContainer.contains(document.activeElement)
       ) {
         state.originalInputValue = "";
-        // ★ blur 時に isComposing を確実に false にする
-        if (state.isComposing) {
-          console.log("Resetting isComposing on blur");
-          state.isComposing = false;
-        }
       }
     }, 100);
-    // ★ blur イベント発生時にも isComposing を false にする
-    //   (setTimeoutの外でも念のため)
-    if (state.isComposing) {
-      state.isComposing = false;
-    }
-  });
-
-  // ★ IME入力状態を追跡するリスナーを追加
-  elements.searchInput.addEventListener("compositionstart", () => {
-    console.log("compositionstart"); // デバッグ用
-    state.isComposing = true;
-  });
-  elements.searchInput.addEventListener("compositionend", () => {
-    console.log("compositionend"); // デバッグ用
-    state.isComposing = false;
-    // ★ compositionend の直後に input イベントが続くことが多いので、
-    //    サジェスト更新は input イベントリスナー (debounce経由) に任せるのが無難
-    //    ここで直接 updateSuggestions を呼ぶと重複する可能性がある
   });
 
   // --- ボタンリスナー ---
@@ -2005,60 +1980,37 @@ function applySuggestionToBox(suggestion) {
   const engineToUse = state.actualEngine;
   const newValue = `${engineToUse} ${suggestion}`;
   console.log(
-    `[applySuggestionToBox] Request to set value to: "${newValue}" (isComposing: ${state.isComposing})`
+    `[applySuggestionToBox] Setting input value to: "${newValue}" (Engine: ${engineToUse}, Suggestion: ${suggestion})`
   );
 
-  // --- 実際の処理を行う関数 ---
-  const applyValueAndFocus = () => {
-    console.log(`[applySuggestionToBox] Applying value: "${newValue}"`);
-    elements.searchInput.value = newValue;
+  // 値を設定
+  elements.searchInput.value = newValue;
 
-    try {
-      // ★ 値設定後にフォーカスを確実に当てる
-      elements.searchInput.focus();
-      // カーソルを末尾に移動
-      elements.searchInput.selectionStart = elements.searchInput.selectionEnd =
-        elements.searchInput.value.length;
-    } catch (e) {
-      console.warn("Error during focus or setting selection range:", e);
-    }
-
-    elements.suggestionsContainer.style.display = "none"; // サジェスト非表示
-    state.originalInputValue = elements.searchInput.value; // 元の値として記憶
-    updateClearButtonVisibility();
-    updateActionButtonState();
-
-    // ★ 検索ボックスの値が更新された後、明示的にサジェスト更新をトリガーする
-    updateSuggestions();
-    console.log(
-      "[applySuggestionToBox] Value applied and suggestions updated."
-    );
-  };
-
-  // --- IME入力中でない場合はすぐに実行 ---
-  if (!state.isComposing) {
-    console.log("[applySuggestionToBox] Not composing, applying immediately.");
-    applyValueAndFocus();
+  // ★★★ input イベントを手動で発火させる ★★★
+  // これにより、IMEや他のリスナーが値の変更を検知し、未確定文字がクリアされることを期待する
+  try {
+    const inputEvent = new Event("input", { bubbles: true, cancelable: true });
+    elements.searchInput.dispatchEvent(inputEvent);
+    console.log("[applySuggestionToBox] Dispatched input event.");
+  } catch (e) {
+    console.error("[applySuggestionToBox] Error dispatching input event:", e);
   }
-  // --- IME入力中の場合は、compositionend を待ってから実行 ---
-  else {
-    console.log(
-      "[applySuggestionToBox] Delaying application until compositionend."
-    );
-    // ★ compositionend イベントを一度だけリッスンする
-    elements.searchInput.addEventListener(
-      "compositionend",
-      () => {
-        console.log(
-          "[applySuggestionToBox] Executing delayed application after compositionend."
-        );
-        // ★ compositionend の直後ではなく、少し待ってから実行する方が安全
-        //    0ms でも非同期になり、IMEの内部処理完了を待てる可能性がある
-        setTimeout(applyValueAndFocus, 0);
-      },
-      { once: true }
-    ); // ★ once: true で一度実行したらリスナーを自動削除
+  // ★★★ ここまで追加 ★★★
+
+  // フォーカスを維持し、カーソルを末尾に移動
+  try {
+    elements.searchInput.focus();
+    elements.searchInput.selectionStart = elements.searchInput.selectionEnd =
+      elements.searchInput.value.length;
+  } catch (e) {
+    console.warn("Error during focus or setting selection range:", e);
   }
+
+  elements.suggestionsContainer.style.display = "none";
+  state.originalInputValue = elements.searchInput.value;
+  updateClearButtonVisibility();
+  updateActionButtonState();
+  updateSuggestions(); // サジェスト更新はイベント発火後の方が良いかもしれない
 }
 
 function executeSearchWithSuggestion(suggestion) {
