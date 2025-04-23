@@ -121,7 +121,14 @@
                 <label for="siteUrl">URL:</label>
                 <input type="text" id="siteUrl" placeholder="例: https://www.google.com" required />
                 <label for="siteName">サイト名:</label>
-                <input type="text" id="siteName" placeholder="例: Google" required />
+                <div class="input-with-button"> <!-- ★ ラッパーDivを追加 -->
+                    <input type="text" id="siteName" placeholder="例: Google" required />
+                    <!-- ★ タイトル取得ボタンを追加 -->
+                    <button type="button" id="fetchTitleButton" class="inline-fetch-button" title="URLからサイト名を取得"
+                        aria-label="URLからサイト名を取得">
+                        <i data-feather="download-cloud"></i>
+                    </button>
+                </div>
                 <div style="margin-bottom: 15px">
                     <label>アイコンプレビュー:</label>
                     <div style="
