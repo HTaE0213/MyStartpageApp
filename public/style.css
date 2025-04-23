@@ -1013,6 +1013,61 @@ body.edit-mode .speed-dial-item-buttons {
   height: 24px;
 }
 
+/* --- 入力欄とインラインボタンのコンテナ --- */
+.input-with-button {
+  display: flex; /* 要素を横並びにする */
+  align-items: center; /* 要素を垂直方向中央揃え */
+  gap: 5px; /* 入力欄とボタンの間隔 */
+  margin-bottom: 15px; /* ★ 元々 input にあった下のマージンをコンテナに移動 */
+}
+
+.input-with-button input[type="text"] {
+  flex-grow: 1; /* 入力欄が残りのスペースを埋めるように */
+  margin-bottom: 0; /* ★ input 自体の下のマージンを解除 */
+}
+
+/* --- タイトル取得ボタンのスタイル --- */
+.inline-fetch-button {
+  padding: 6px 8px; /* ボタン内の余白 */
+  background-color: transparent; /* 背景透明 */
+  border: 1px solid var(--border-color); /* 枠線 */
+  border-radius: 4px; /* 角丸 */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0; /* 縮まないように */
+  color: var(--text-secondary); /* アイコンの色 */
+  transition: var(--transition);
+}
+
+.inline-fetch-button:hover {
+  background-color: var(--highlight-color); /* ホバー時背景 */
+  border-color: var(--primary-color); /* ホバー時枠線 */
+  color: var(--text-color); /* ホバー時アイコン色 */
+}
+
+.inline-fetch-button svg {
+  width: 14px; /* アイコンサイズ */
+  height: 14px;
+}
+
+/* ボタン無効化時のスタイル */
+.inline-fetch-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: transparent; /* 無効時も背景は透明のまま */
+}
+
+/* ボタン内にスピナーを表示する場合のスタイル */
+.inline-fetch-button .spinner {
+  width: 14px; /* ボタン内のアイコンサイズに合わせる */
+  height: 14px;
+  border-width: 2px; /* スピナー線の太さ */
+  border-left-color: var(--primary-color); /* スピナーの色 */
+  margin: 0; /* マージン解除 */
+}
+
 @media (prefers-color-scheme: dark) {
   .current-engine-display:hover,
   .current-engine-display:focus {
@@ -1227,6 +1282,19 @@ body.edit-mode .speed-dial-item-buttons {
   .arrow-button:hover,
   .arrow-button:focus {
     background-color: #3d3d3d; /* ダークモードのハイライト色 */
+  }
+
+  .inline-fetch-button {
+    border-color: #555;
+    color: var(--text-secondary);
+  }
+  .inline-fetch-button:hover {
+    background-color: #444;
+    border-color: var(--primary-color);
+    color: #eee;
+  }
+  .inline-fetch-button .spinner {
+    border-left-color: var(--primary-color);
   }
 }
 
