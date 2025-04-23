@@ -93,6 +93,9 @@ const AppSettings = {
     CURRENT_ENGINE: "currentSearchEngine", // 現在のエンジン
     THEME: "startpageTheme", // テーマ設定 (例)
     BACKGROUND: "startpageBackground", // 背景設定 (例)
+    // ★★★ デフォルトエンジン用のキーを追加 ★★★
+    DEFAULT_SEARCH_ENGINE: "defaultSearchEngine",
+    DEFAULT_SUGGEST_ENGINE: "defaultSuggestEngine",
     // 他に必要な設定キーがあれば追加
   },
   // アプリケーションのメモリ上に保持する設定値
@@ -105,12 +108,18 @@ const AppSettings = {
     theme: "system", // テーマ ('light', 'dark', 'system')
     background: "", // 背景画像/色の設定値
     // currentEngine は values に保持せず、都度 localStorage から読む or キャッシュを使う
+    // ★ デフォルトエンジンは values に保持せず、直接 localStorage から読む
+    // defaultSearchEngine: 'g',
+    // defaultSuggestEngine: 'g',
   },
   // デフォルト値 (localStorage に値がない場合に使用)
   defaults: {
     columns: 4,
     theme: "system",
     background: "",
+    // ★★★ デフォルトエンジン用のデフォルト値を設定 ★★★
+    defaultSearchEngine: "g",
+    defaultSuggestEngine: "g",
   },
 
   /**
@@ -135,10 +144,11 @@ const AppSettings = {
       localStorage.getItem(this.KEYS.BACKGROUND) || this.defaults.background;
 
     // エンジン設定をロード (カスタム/削除済みを考慮)
-    this.loadEngines();
+    this.loadEngines(); // ★ これを先に呼ぶことが重要
 
-    // 現在のエンジンをキャッシュに読み込む (任意だが効率化のため)
-    cache.currentEngine = this.getCurrentEngine();
+    // ★ デフォルトエンジンは loadEngines の後に取得・検証する
+    //    (values には保持しない)
+    cache.currentEngine = this.getCurrentEngine(); // 現在選択中のエンジン
 
     // ロードした設定をUIに反映 (例: テーマ適用など)
     this.applyTheme();
@@ -173,6 +183,8 @@ const AppSettings = {
         JSON.stringify(this.values.deletedBuiltinEngines)
       );
       // 現在のエンジンは setCurrentEngine で保存されるので、ここでは不要
+      // ★ デフォルトエンジンは setDefault... メソッドで個別に保存されるので、
+      //   ここでは保存しない (values に保持していないため)
 
       console.log("[AppSettings] Settings saved successfully.");
     } catch (error) {
@@ -259,6 +271,7 @@ const AppSettings = {
 
   /**
    * 現在選択されている検索エンジンのニックネームを取得する
+   * (無効な場合はデフォルト検索エンジンを返すように修正)
    * @returns {string | null} 現在のエンジンのニックネーム、または見つからない場合は null
    */
   getCurrentEngine: function () {
@@ -273,39 +286,11 @@ const AppSettings = {
       return storedEngine;
     }
 
-    // 存在しない場合や未設定の場合はデフォルト 'g' を試す
-    const defaultEngine = "g";
-    if (this.values.engines && this.values.engines[defaultEngine]) {
-      if (storedEngine) {
-        // 無効な値が保存されていた場合
-        console.warn(
-          `[GetCurrentEngine] Stored engine '${storedEngine}' not found or invalid, falling back to '${defaultEngine}'.`
-        );
-      } else {
-        // 未設定だった場合
-        console.log(
-          `[GetCurrentEngine] No current engine set, using default '${defaultEngine}'.`
-        );
-      }
-      // デフォルトエンジンをlocalStorageにも設定しておく (任意)
-      // localStorage.setItem(this.KEYS.CURRENT_ENGINE, defaultEngine);
-      return defaultEngine;
-    }
-
-    // デフォルト 'g' すら存在しない場合、リストの最初のエンジンを返す
-    const engineKeys = Object.keys(this.values.engines || {});
-    if (engineKeys.length > 0) {
-      const firstEngine = engineKeys[0];
-      console.warn(
-        `[GetCurrentEngine] Default engine '${defaultEngine}' not found, using first available engine: ${firstEngine}`
-      );
-      // localStorage.setItem(this.KEYS.CURRENT_ENGINE, firstEngine); // 最初のエンジンを保存
-      return firstEngine;
-    }
-
-    // 有効なエンジンが全くない場合
-    console.error("[GetCurrentEngine] No valid engines available!");
-    return null;
+    // 存在しない場合や未設定の場合はデフォルト *検索* エンジンを返す
+    console.warn(
+      `[GetCurrentEngine] Stored engine '${storedEngine}' not valid, falling back to default search engine.`
+    );
+    return this.getDefaultSearchEngine(); // ★ デフォルト検索エンジンを返す
   },
 
   /**
@@ -321,6 +306,129 @@ const AppSettings = {
     } else {
       console.error(
         `[SetCurrentEngine] Attempted to set invalid or non-existent engine: ${nickname}`
+      );
+    }
+  },
+
+  // ★★★ デフォルトエンジン関連のメソッドを追加 ★★★
+
+  /**
+   * 設定されているデフォルト検索エンジンを取得する
+   * @returns {string} デフォルト検索エンジンのニックネーム
+   */
+  getDefaultSearchEngine: function () {
+    const storedDefault = localStorage.getItem(this.KEYS.DEFAULT_SEARCH_ENGINE);
+    // 保存された値が現在の有効なエンジンリストに存在するか確認
+    if (
+      storedDefault &&
+      this.values.engines &&
+      this.values.engines[storedDefault]
+    ) {
+      return storedDefault;
+    }
+    // なければ、デフォルト値 ('g') が有効か確認
+    const fallbackDefault = this.defaults.defaultSearchEngine;
+    if (this.values.engines && this.values.engines[fallbackDefault]) {
+      console.warn(
+        `[GetDefaultSearch] Using default value: ${fallbackDefault}`
+      );
+      return fallbackDefault;
+    }
+    // デフォルト値 ('g') も無効なら、リストの最初のエンジンを返す
+    const engineKeys = Object.keys(this.values.engines || {});
+    if (engineKeys.length > 0) {
+      const firstEngine = engineKeys[0];
+      console.warn(
+        `[GetDefaultSearch] Default '${fallbackDefault}' invalid, using first available: ${firstEngine}`
+      );
+      return firstEngine;
+    }
+    console.error("[GetDefaultSearch] No valid engines available!");
+    return "g"; // 最終手段
+  },
+
+  /**
+   * デフォルト検索エンジンを設定（保存）する
+   * @param {string} nickname 設定するエンジンのニックネーム
+   */
+  setDefaultSearchEngine: function (nickname) {
+    if (nickname && this.values.engines && this.values.engines[nickname]) {
+      localStorage.setItem(this.KEYS.DEFAULT_SEARCH_ENGINE, nickname);
+      console.log(
+        `[SetDefaultSearch] Default search engine set to: ${nickname}`
+      );
+    } else {
+      console.error(
+        `[SetDefaultSearch] Attempted to set invalid default search engine: ${nickname}`
+      );
+    }
+  },
+
+  /**
+   * 設定されているデフォルトサジェストエンジンを取得する
+   * @returns {string} デフォルトサジェストエンジンのニックネーム
+   */
+  getDefaultSuggestEngine: function () {
+    const storedDefault = localStorage.getItem(
+      this.KEYS.DEFAULT_SUGGEST_ENGINE
+    );
+    // 保存された値が現在の有効なエンジンリストに存在し、かつサジェストURLを持つか確認
+    if (
+      storedDefault &&
+      this.values.engines &&
+      this.values.engines[storedDefault] &&
+      this.values.engines[storedDefault].suggestUrl
+    ) {
+      return storedDefault;
+    }
+    // なければ、デフォルト値 ('g') が有効か確認
+    const fallbackDefault = this.defaults.defaultSuggestEngine;
+    if (
+      this.values.engines &&
+      this.values.engines[fallbackDefault] &&
+      this.values.engines[fallbackDefault].suggestUrl
+    ) {
+      console.warn(
+        `[GetDefaultSuggest] Using default value: ${fallbackDefault}`
+      );
+      return fallbackDefault;
+    }
+    // デフォルト値 ('g') も無効なら、サジェスト可能な最初のエンジンを探す
+    const engineKeys = Object.keys(this.values.engines || {});
+    for (const key of engineKeys) {
+      if (this.values.engines[key].suggestUrl) {
+        const firstSuggestEngine = key;
+        console.warn(
+          `[GetDefaultSuggest] Default '${fallbackDefault}' invalid, using first available with suggest: ${firstSuggestEngine}`
+        );
+        return firstSuggestEngine;
+      }
+    }
+    console.error(
+      "[GetDefaultSuggest] No valid engines with suggest URL available!"
+    );
+    return "g"; // 最終手段
+  },
+
+  /**
+   * デフォルトサジェストエンジンを設定（保存）する
+   * @param {string} nickname 設定するエンジンのニックネーム
+   */
+  setDefaultSuggestEngine: function (nickname) {
+    // サジェストURLを持つ有効なエンジンか確認
+    if (
+      nickname &&
+      this.values.engines &&
+      this.values.engines[nickname] &&
+      this.values.engines[nickname].suggestUrl
+    ) {
+      localStorage.setItem(this.KEYS.DEFAULT_SUGGEST_ENGINE, nickname);
+      console.log(
+        `[SetDefaultSuggest] Default suggest engine set to: ${nickname}`
+      );
+    } else {
+      console.error(
+        `[SetDefaultSuggest] Attempted to set invalid default suggest engine (or engine without suggest URL): ${nickname}`
       );
     }
   },
@@ -489,7 +597,6 @@ const cache = {
   // 例: スピードダイアルの DOM 要素キャッシュなど
   speedDialItems: {},
 };
-
 // --- Settings Export/Import ---
 
 /**
@@ -684,6 +791,12 @@ const elements = {
   helpButton: document.getElementById("helpButton"),
   helpContent: document.getElementById("helpContent"),
   manageEnginesButton: document.getElementById("manageEngines"),
+  defaultSearchEngineSelect: document.getElementById(
+    "defaultSearchEngineSelect"
+  ),
+  defaultSuggestEngineSelect: document.getElementById(
+    "defaultSuggestEngineSelect"
+  ),
   exportSettingsButton: document.getElementById("exportSettingsButton"),
   importSettingsButton: document.getElementById("importSettingsButton"),
   importSettingsFile: document.getElementById("importSettingsFile"),
@@ -702,10 +815,68 @@ const elements = {
   settingsPanel: document.getElementById("settingsPanel"),
 };
 
+/**
+ * デフォルトエンジン選択のドロップダウンリストをレンダリングする
+ */
+function renderDefaultEngineSelectors() {
+  if (
+    !elements.defaultSearchEngineSelect ||
+    !elements.defaultSuggestEngineSelect
+  ) {
+    console.warn("Default engine select elements not found.");
+    return;
+  }
+
+  const searchSelect = elements.defaultSearchEngineSelect;
+  const suggestSelect = elements.defaultSuggestEngineSelect;
+
+  // オプションをクリア
+  searchSelect.innerHTML = "";
+  suggestSelect.innerHTML = "";
+
+  const fragmentSearch = document.createDocumentFragment();
+  const fragmentSuggest = document.createDocumentFragment();
+
+  const currentDefaultSearch = AppSettings.getDefaultSearchEngine();
+  const currentDefaultSuggest = AppSettings.getDefaultSuggestEngine();
+
+  const sortedNicknames = Object.keys(AppSettings.values.engines).sort();
+
+  sortedNicknames.forEach((nickname) => {
+    const engine = AppSettings.values.engines[nickname];
+
+    // --- デフォルト検索用オプション ---
+    const optionSearch = document.createElement("option");
+    optionSearch.value = nickname;
+    optionSearch.textContent = `${nickname} - ${engine.name}`;
+    if (nickname === currentDefaultSearch) {
+      optionSearch.selected = true;
+    }
+    fragmentSearch.appendChild(optionSearch);
+
+    // --- デフォルトサジェスト用オプション (サジェストURLを持つもののみ) ---
+    if (engine.suggestUrl) {
+      const optionSuggest = document.createElement("option");
+      optionSuggest.value = nickname;
+      optionSuggest.textContent = `${nickname} - ${engine.name}`;
+      if (nickname === currentDefaultSuggest) {
+        optionSuggest.selected = true;
+      }
+      fragmentSuggest.appendChild(optionSuggest);
+    }
+  });
+
+  searchSelect.appendChild(fragmentSearch);
+  suggestSelect.appendChild(fragmentSuggest);
+
+  console.log("Rendered default engine selectors.");
+}
+
 let speedDialData = []; // Local variable for speed dial data
 // let longPressTimerId = null; // ← state に移動したので不要
 const LONG_PRESS_DURATION = 600; // ★ 長押し判定時間 (ミリ秒)
 
+// --- Initialization ---
 // --- Initialization ---
 function init() {
   document.addEventListener("DOMContentLoaded", () => {
@@ -737,6 +908,20 @@ function init() {
     updateCurrentEngineDisplay();
 
     feather.replace();
+
+    // ★ ページ読み込み後、検索ボックスにフォーカスを当てる
+    //   モバイルデバイスでソフトウェアキーボードが表示されやすくなる
+    //   ただし、ブラウザやOSの挙動により100%表示される保証はない
+    //   また、ユーザーの操作なしでのフォーカスはUXに影響する場合があるので注意
+    //   setTimeoutで少し遅延させることで、レンダリング後のフォーカス成功率を高める試み
+    setTimeout(() => {
+        if (elements.searchInput) { // 要素の存在を確認
+            elements.searchInput.focus({ preventScroll: true }); // preventScrollでフォーカス時のスクロールを防ぐ(任意)
+            console.log("Focused on search input on load.");
+        } else {
+            console.warn("Search input element not found during init focus attempt.");
+        }
+    }, 100); // 100ミリ秒程度の遅延
   });
 }
 
@@ -999,23 +1184,22 @@ function setupEventListeners() {
     });
   }
 
-  // ★ メニュー外クリックでメニューを閉じる
-  document.addEventListener("click", (event) => {
-    if (
-      elements.engineSelectMenu &&
-      elements.engineSelectMenu.style.display === "block"
-    ) {
-      if (
-        !elements.engineSelectMenu.contains(event.target) &&
-        !elements.currentEngineDisplay.contains(event.target)
-      ) {
-        closeEngineSelectMenu();
-      }
-    }
-  });
+  // ★ デフォルト検索エンジン選択のリスナー
+  if (elements.defaultSearchEngineSelect) {
+    elements.defaultSearchEngineSelect.addEventListener("change", (event) => {
+      AppSettings.setDefaultSearchEngine(event.target.value);
+      // 必要なら他のUIも更新 (例: getCurrentEngine のキャッシュ更新など)
+      cache.currentEngine = AppSettings.getCurrentEngine(); // キャッシュ更新推奨
+      updateCurrentEngineDisplay(); // 現在のエンジン表示も念のため更新
+    });
+  }
 
-  // ★ 検索入力時にエンジン表示も更新
-  elements.searchInput.addEventListener("input", updateCurrentEngineDisplay);
+  // ★ デフォルトサジェストエンジン選択のリスナー
+  if (elements.defaultSuggestEngineSelect) {
+    elements.defaultSuggestEngineSelect.addEventListener("change", (event) => {
+      AppSettings.setDefaultSuggestEngine(event.target.value);
+    });
+  }
 
   // ★★★ 背景クリックで編集モードを終了するリスナー ★★★
   const container = document.querySelector(".container"); // bodyではなくcontainerを対象に
@@ -1123,75 +1307,129 @@ function updateActionButtonState() {
   }
 }
 
-// --- Current Engine Display ---
 /**
- * 検索ボックスの内容に基づいて現在のエンジン表示を更新する
+ * 指定されたエンジン、または現在選択中のエンジンの表示を更新する
+ * @param {string} [targetEngineNickname=null] 表示したいエンジンのニックネーム。nullの場合は現在選択中のエンジンを表示。
  */
-function updateCurrentEngineDisplay() {
-  const currentEngine = AppSettings.getCurrentEngine();
-  const engineData = AppSettings.values.engines[currentEngine];
-  const defaultIconPath = "icons/default-search.svg"; // ★ デフォルトアイコンのパス (例)
+function updateCurrentEngineDisplay(targetEngineNickname = null) {
+  // ★ 表示対象のエンジンニックネームを決定
+  const engineNicknameToShow =
+    targetEngineNickname !== null
+      ? targetEngineNickname
+      : AppSettings.getCurrentEngine(); // 引数がなければ現在選択中のエンジン
 
-  if (engineData && elements.currentEngineIcon) {
-    // 1. エンジン設定から iconUrl を取得
-    let iconSrc = engineData.iconUrl;
+  const engineData = AppSettings.values.engines[engineNicknameToShow];
+  const defaultIconPath = "icons/default-search.svg"; // デフォルトアイコンパス
 
-    // 2. iconUrl がない場合、ビルトイン定義から取得 (ただし推奨しない場合も)
-    //    カスタム設定を優先するため、一旦コメントアウト。必要なら復活させる。
-    // if (!iconSrc && builtinEngines[currentEngine]) {
-    //     iconSrc = builtinEngines[currentEngine].iconUrl;
-    // }
+  // --- アイコン要素の取得 ---
+  const iconElement = elements.currentEngineIcon;
+  const initialElement = elements.currentEngineInitial;
+  if (!iconElement || !initialElement) {
+    console.error("Engine display elements not found.");
+    return;
+  }
 
-    // 3. onerror ハンドラを先に設定 (無限ループ防止のため)
-    //    エラーが発生したら必ずデフォルトアイコンを表示し、再度のエラー発生を防ぐ
-    elements.currentEngineIcon.onerror = function () {
+  // --- onerror ハンドラの設定 (共通化) ---
+  // 無限ループしないように、エラー時はデフォルトアイコンを表示してハンドラ解除
+  iconElement.onerror = function () {
+    if (this.src !== defaultIconPath) {
+      // デフォルトアイコン自体でエラーになったら無限ループするのでチェック
       console.warn(
         `Failed to load icon: ${this.src}. Falling back to default.`
       );
-      this.onerror = null; // ★ 再帰的なエラーを防ぐためにハンドラを削除
+      this.onerror = null; // ハンドラ解除
       this.src = defaultIconPath;
-      this.style.display = "inline-block"; // デフォルトは表示
-    };
+      this.style.display = "inline-block";
+      initialElement.style.display = "none";
+    } else {
+      console.error(`Failed to load default icon: ${defaultIconPath}`);
+      this.style.display = "none"; // デフォルトすら読めなければ非表示
+      initialElement.style.display = "none";
+    }
+  };
 
-    // 4. 有効な iconSrc があれば設定、なければデフォルトを設定
+  // --- エンジンデータに基づいて表示 ---
+  if (engineData) {
+    let iconSrc = engineData.iconUrl;
+    // 1. 有効なアイコンURLがある場合
     if (
       iconSrc &&
       (isValidHttpUrl(iconSrc) || iconSrc.startsWith("data:image"))
     ) {
-      console.log(
-        `[updateCurrentEngineDisplay] Setting icon for ${currentEngine}: ${iconSrc}`
-      );
-      elements.currentEngineIcon.src = iconSrc;
-      elements.currentEngineIcon.style.display = "inline-block";
-    } else {
+      // ★★★ 現在の src と異なる場合のみ設定 ★★★
+      if (iconElement.src !== iconSrc) {
+        console.log(
+          `[updateCurrentEngineDisplay] Updating icon for ${engineNicknameToShow}: ${iconSrc}`
+        );
+        iconElement.src = iconSrc;
+      }
+      // 表示/非表示は常に設定 (イニシャル表示から切り替わる場合があるため)
+      iconElement.style.display = "inline-block";
+      initialElement.style.display = "none";
+    }
+    // 2. アイコンURLがない、または無効な場合 -> イニシャル表示
+    else {
       if (iconSrc) {
         // 無効なURLが設定されていた場合
         console.warn(
-          `[updateCurrentEngineDisplay] Invalid iconUrl for ${currentEngine}: ${iconSrc}. Using default.`
-        );
-      } else {
-        // iconUrl が未設定の場合
-        console.log(
-          `[updateCurrentEngineDisplay] No iconUrl for ${currentEngine}. Using default.`
+          `[updateCurrentEngineDisplay] Invalid iconUrl for ${engineNicknameToShow}: ${iconSrc}. Showing initial.`
         );
       }
-      // ★ iconUrl が無効または未設定の場合はデフォルトアイコンを使用
-      elements.currentEngineIcon.src = defaultIconPath;
-      elements.currentEngineIcon.style.display = "inline-block"; // デフォルトは表示
-      // この場合 onerror はトリガーされないはず (デフォルトパスが正しければ)
+      // イニシャル表示関数を呼び出す
+      displayInitialIcon(initialElement, iconElement, engineData.name);
     }
-  } else if (elements.currentEngineIcon) {
-    // エンジンデータが見つからない場合もデフォルト表示
+  }
+  // 3. エンジンデータ自体が見つからない場合 -> デフォルトアイコン表示
+  else {
     console.warn(
-      `[updateCurrentEngineDisplay] Engine data not found for ${currentEngine}. Using default icon.`
+      `[updateCurrentEngineDisplay] Engine data not found for ${engineNicknameToShow}. Using default icon.`
     );
-    elements.currentEngineIcon.onerror = null; // ハンドラ削除
-    elements.currentEngineIcon.src = defaultIconPath;
-    elements.currentEngineIcon.style.display = "inline-block";
+    // ★★★ 現在の src と異なる場合のみ設定 ★★★
+    if (iconElement.src !== defaultIconPath) {
+      console.log(`[updateCurrentEngineDisplay] Setting default icon.`);
+      iconElement.src = defaultIconPath;
+    }
+    // 表示/非表示は常に設定
+    iconElement.style.display = "inline-block";
+    initialElement.style.display = "none";
   }
 
-  // ★ Feather アイコンの再描画が必要な場合 (デフォルトアイコンが SVG の場合など)
-  // feather.replace(); // 必要に応じて呼び出す
+  // --- ツールチップ（title属性）の更新 ---
+  const displayElement = elements.currentEngineDisplay;
+  if (displayElement) {
+    if (engineData) {
+      displayElement.title = `検索エンジン: ${engineData.name} (${engineNicknameToShow})`;
+    } else {
+      displayElement.title = "検索エンジンを選択";
+    }
+  }
+}
+
+/**
+ * イニシャルアイコンを表示するヘルパー関数
+ * @param {HTMLElement} initialElement イニシャルを表示する要素 (例: span)
+ * @param {HTMLElement} iconElement 画像アイコン要素 (例: img)
+ * @param {string} name イニシャル生成用の名前
+ */
+function displayInitialIcon(initialElement, iconElement, name) {
+  // 名前がない場合は '?' を使う
+  const displayName = name || "";
+  const initial = displayName.charAt(0).toUpperCase() || "?";
+
+  if (initialElement) {
+    // ★ テキスト内容が違う場合のみ更新 (ちらつき軽減)
+    if (initialElement.textContent !== initial) {
+      initialElement.textContent = initial;
+    }
+    initialElement.style.display = "flex"; // イニシャルを表示
+  }
+  if (iconElement) {
+    iconElement.style.display = "none"; // 画像アイコンを非表示
+    // ★ src を空にするのは一回だけで良い場合が多い
+    if (iconElement.src !== "") {
+      iconElement.src = ""; // srcをクリアして不要なロードを防ぐ
+    }
+  }
 }
 
 // ★ イニシャル表示用のヘルパー関数 (共通化のため)
@@ -1311,20 +1549,22 @@ function selectEngineFromMenu(nickname) {
 
   // 既にニックネームらしきものがあるか判定
   if (parts.length > 1 && AppSettings.values.engines[parts[0].toLowerCase()]) {
-    // 既存のニックネームを置き換える
     newInputValue = nickname + " " + parts.slice(1).join(" ");
   } else if (currentInput.trim() === "") {
-    // 入力が空ならニックネームとスペースを追加
     newInputValue = nickname + " ";
   } else {
-    // それ以外（検索語句のみ、または無効なニックネーム）の場合は先頭に追加
     newInputValue = nickname + " " + currentInput;
   }
-
   elements.searchInput.value = newInputValue;
+
   closeEngineSelectMenu();
-  elements.searchInput.focus(); // 検索ボックスにフォーカスを戻す
-  updateCurrentEngineDisplay(); // 表示を更新
+  elements.searchInput.focus();
+
+  // ★★★ AppSettings に保存し、表示も更新 ★★★
+  AppSettings.setCurrentEngine(nickname); // localStorage に保存
+  cache.currentEngine = nickname; // キャッシュも更新
+  updateCurrentEngineDisplay(nickname); // ★ 表示を確定させる
+
   updateSuggestions(); // サジェストも更新
   updateClearButtonVisibility();
   updateActionButtonState();
@@ -1332,42 +1572,80 @@ function selectEngineFromMenu(nickname) {
 
 // --- Search & Suggestions ---
 function updateSuggestions() {
-  // deactivateFallbackIndicator(); // ★ 時間経過以外での解除は削除
   updateClearButtonVisibility();
   updateActionButtonState();
   const input = elements.searchInput.value.trim();
-  state.originalInputValue = elements.searchInput.value;
-  if (!input) {
-    elements.suggestionsContainer.style.display = "none";
-    state.lastQuery = "";
-    return;
-  }
-
-  const parts = input.split(" ");
-  const nickname = parts[0].toLowerCase();
-  const searchTerms = parts.slice(1).join(" ");
+  state.originalInputValue = elements.searchInput.value; // 元の値を保存
 
   let query = input;
-  let engine = "g";
+  let engineNicknameForSuggest = AppSettings.getDefaultSuggestEngine();
+  let engineNicknameForDisplay = AppSettings.getCurrentEngine(); // ★ 表示用デフォルトは選択中エンジン
+  let searchTermsExist = false;
+  let detectedNickname = null; // ★ 検出されたニックネームを保持
 
-  if (AppSettings.values.engines[nickname] && searchTerms) {
-    engine = nickname;
-    query = searchTerms;
-  }
+  if (input) {
+    const parts = input.split(" ");
+    const potentialNickname = parts[0].toLowerCase();
 
-  const cacheKey = `${engine}_${query}`;
+    // 有効なニックネームか判定
+    if (AppSettings.values.engines[potentialNickname]) {
+      detectedNickname = potentialNickname; // ★ ニックネームを検出
+      engineNicknameForDisplay = potentialNickname; // ★ 表示用エンジンを検出したものに
 
-  if (query === state.lastQuery && state.actualEngine === engine) {
-    if (cache.suggestions[cacheKey]) {
-      displaySuggestions(cache.suggestions[cacheKey]);
+      if (parts.length > 1) {
+        // 検索語句もある場合
+        searchTermsExist = true;
+        query = parts.slice(1).join(" ");
+
+        if (AppSettings.values.engines[potentialNickname].suggestUrl) {
+          engineNicknameForSuggest = potentialNickname;
+        } else {
+          query = input;
+          engineNicknameForSuggest = AppSettings.getDefaultSuggestEngine();
+        }
+      } else {
+        // ニックネームのみ入力されている場合
+        query = ""; // サジェストクエリは空
+        engineNicknameForSuggest = potentialNickname; // サジェストはそのエンジンで試す（空クエリで）
+      }
+    } else {
+      // ニックネーム指定がない場合
+      query = input;
+      engineNicknameForSuggest = AppSettings.getDefaultSuggestEngine();
+      // engineNicknameForDisplay は変更しない (選択中エンジンのまま)
     }
-    return;
+  } else {
+    // 入力が空の場合
+    elements.suggestionsContainer.style.display = "none";
+    state.lastQuery = "";
+    // engineNicknameForDisplay は変更しない (選択中エンジンのまま)
   }
 
-  state.lastQuery = query;
-  state.actualEngine = engine;
+  // ★★★ 判定したエンジンでアイコン表示を更新 ★★★
+  updateCurrentEngineDisplay(engineNicknameForDisplay);
 
-  fetchSuggestions(query, engine);
+  // --- サジェスト取得処理 ---
+  // (ニックネームのみの場合もサジェスト取得を試みるように変更)
+  if (input) {
+    // 検索語句があるか、ニックネーム指定がない場合にサジェスト取得
+    if (searchTermsExist || detectedNickname === null) {
+      state.actualEngine = engineNicknameForSuggest;
+      const cacheKey = `${engineNicknameForSuggest}:${query}`;
+      if (state.lastQuery === query && cache.suggestions[cacheKey]) {
+        displaySuggestions(cache.suggestions[cacheKey]);
+        return;
+      }
+      state.lastQuery = query;
+      fetchSuggestions(query, engineNicknameForSuggest);
+    } else {
+      // ニックネームのみ入力の場合はサジェスト非表示
+      displaySuggestions([]);
+      state.lastQuery = "";
+      state.actualEngine = engineNicknameForDisplay; // 実際のエンジンとしては認識
+    }
+  } else {
+    displaySuggestions([]); // 入力が空ならクリア
+  }
 }
 
 // ★ fetchSuggestions 関数は【方法3】の修正済みコードを想定
@@ -1626,6 +1904,7 @@ function displaySuggestions(suggestions) {
 
     const engineIndicator = document.createElement("span");
     engineIndicator.className = "engine-indicator";
+    // ★★★ state.actualEngine を使う ★★★
     engineIndicator.textContent =
       AppSettings.values.engines[state.actualEngine]?.name + ": ";
 
@@ -1633,23 +1912,38 @@ function displaySuggestions(suggestions) {
     textSpan.className = "suggestion-text";
     textSpan.textContent = suggestionText;
 
-    const arrowButton = document.createElement("button");
-    arrowButton.className = "arrow-button";
-    arrowButton.innerHTML = '<i data-feather="arrow-right"></i>';
-    arrowButton.setAttribute("aria-label", "入力欄にコピー");
-    arrowButton.type = "button";
-    arrowButton.addEventListener("click", (e) => {
-      e.stopPropagation();
-      applySuggestionToBox(suggestionText);
-    });
+        const arrowButton = document.createElement("button");
+        arrowButton.className = "arrow-button";
+        arrowButton.innerHTML = '<i data-feather="arrow-right"></i>';
+        arrowButton.setAttribute("aria-label", "入力欄にコピー");
+        arrowButton.type = "button";
+        // ★ イベントを 'mousedown' に変更し、stopPropagation() を呼び出す
+        arrowButton.addEventListener("mousedown", (e) => {
+          e.stopPropagation(); // ★ 親要素(item)への mousedown イベントの伝播を停止
+          applySuggestionToBox(suggestionText);
+          // mousedown でフォーカスが外れるのを防ぐ (任意だがUX向上)
+          e.preventDefault();
+        });
+        // ★ 念のため、click イベントでも stopPropagation を行う (環境による差異吸収)
+        arrowButton.addEventListener("click", (e) => {
+          e.stopPropagation();
+          e.preventDefault(); // click のデフォルト動作も抑制
+        });
 
     item.appendChild(engineIndicator);
     item.appendChild(textSpan);
     item.appendChild(arrowButton);
 
-    item.addEventListener("click", () => {
-      executeSearchWithSuggestion(suggestionText);
-    });
+        item.addEventListener("mousedown", (event) => {
+          // ★ イベントを 'click' から 'mousedown' に変更
+          event.preventDefault(); // ★ デフォルトのmousedown動作（テキスト選択やフォーカス移動など）を抑制し、IME確定の妨げになる可能性を減らす
+          console.log(`Suggestion item mousedown: ${suggestionText}`); // デバッグ用ログ
+          // setTimeout は維持。mousedown の直後に実行されるようにする
+          setTimeout(() => {
+            executeSearchWithSuggestion(suggestionText);
+          }, 0);
+        });
+
 
     fragment.appendChild(item);
   });
@@ -1661,25 +1955,36 @@ function displaySuggestions(suggestions) {
 }
 
 function applySuggestionToBox(suggestion) {
-  elements.searchInput.value =
-    state.actualEngine !== "g"
-      ? state.actualEngine + " " + suggestion
-      : suggestion;
-  elements.searchInput.focus();
+  const engineToUse = state.actualEngine; // サジェスト取得に使ったエンジンを取得
+
+  // ★★★ 常に「ニックネーム + スペース + サジェスト」で値を完全に設定する ★★★
+  const newValue = `${engineToUse} ${suggestion}`;
+  console.log(
+    `[applySuggestionToBox] Setting input value to: "${newValue}" (Engine: ${engineToUse}, Suggestion: ${suggestion})`
+  );
+  elements.searchInput.value = newValue;
+
+  elements.searchInput.focus(); // フォーカス
+  // カーソルを末尾に移動
   elements.searchInput.selectionStart = elements.searchInput.selectionEnd =
     elements.searchInput.value.length;
-  elements.suggestionsContainer.style.display = "none";
-  state.originalInputValue = elements.searchInput.value;
-  updateClearButtonVisibility(); // ★ 追加
-  updateActionButtonState(); // ★ 追加
+  elements.suggestionsContainer.style.display = "none"; // サジェスト非表示
+  state.originalInputValue = elements.searchInput.value; // 元の値として記憶
+  updateClearButtonVisibility();
+  updateActionButtonState();
+
+  // ★ 検索ボックスの値が更新された後、明示的にサジェスト更新をトリガーする
+  updateSuggestions();
 }
 
 function executeSearchWithSuggestion(suggestion) {
+  console.log(`Executing search with suggestion: ${suggestion}`); // デバッグ用ログ
   const searchUrl = AppSettings.values.engines[state.actualEngine]?.url.replace(
     /%s/g,
     encodeURIComponent(suggestion)
   );
   if (searchUrl) {
+    console.log(`Navigating to: ${searchUrl}`); // デバッグ用ログ
     window.location.href = searchUrl;
   } else {
     console.error(
@@ -1689,8 +1994,8 @@ function executeSearchWithSuggestion(suggestion) {
   }
 }
 
+
 function executeSearch() {
-  // deactivateFallbackIndicator(); // ★ 時間経過以外での解除は削除
   const input = elements.searchInput.value.trim();
   if (!input) return;
 
@@ -1699,18 +2004,28 @@ function executeSearch() {
   const searchTerms = parts.slice(1).join(" ");
 
   let searchUrl = "";
-  let targetEngine = "g";
+  let targetEngine = AppSettings.getDefaultSearchEngine(); // ★ デフォルト検索エンジンを取得
 
   if (AppSettings.values.engines[nickname] && searchTerms) {
+    // ニックネーム指定がある場合
     targetEngine = nickname;
     searchUrl = AppSettings.values.engines[nickname].url.replace(
       /%s/g,
       encodeURIComponent(searchTerms)
     );
   } else {
-    const googleUrl =
-      AppSettings.values.engines["g"]?.url || builtinEngines["g"].url;
-    searchUrl = googleUrl.replace(/%s/g, encodeURIComponent(input));
+    // ニックネーム指定がない場合 (デフォルトエンジンを使用)
+    if (AppSettings.values.engines[targetEngine]) {
+      searchUrl = AppSettings.values.engines[targetEngine].url.replace(
+        /%s/g,
+        encodeURIComponent(input) // ★ 入力全体を検索語句とする
+      );
+    } else {
+      // デフォルトエンジンが見つからない場合のフォールバック (ほぼ起こらないはず)
+      console.error("Default search engine not found!");
+      const fallbackUrl = builtinEngines["g"].url; // Googleにフォールバック
+      searchUrl = fallbackUrl.replace(/%s/g, encodeURIComponent(input));
+    }
   }
 
   if (searchUrl) {
@@ -1884,24 +2199,65 @@ async function processClipboard() {
 
 // --- Speed Dial Management ---
 function handleColumnsChange() {
+  console.log("handleColumnsChange called"); // ★ 呼び出し確認
   const columnsInput = elements.columnsInput;
   const columns = parseInt(columnsInput.value, 10);
   const minCols = parseInt(columnsInput.min, 10);
   const maxCols = parseInt(columnsInput.max, 10);
+  console.log(
+    `Input value: ${columnsInput.value}, Parsed: ${columns}, Min: ${minCols}, Max: ${maxCols}`
+  ); // ★ 値確認
+
   if (!isNaN(columns) && columns >= minCols && columns <= maxCols) {
-    AppSettings.setColumns(columns);
-    updateGrid(columns);
+    console.log(`Validation passed. Setting columns to ${columns}`); // ★ バリデーション確認
+    // AppSettings.values.columns に値を設定
+    AppSettings.values.columns = columns;
+    console.log(
+      "Updated AppSettings.values.columns:",
+      AppSettings.values.columns
+    ); // ★ 値更新確認
+
+    console.log("Calling AppSettings.save()..."); // ★ 保存呼び出し確認
+    AppSettings.save(); // 設定をlocalStorageに保存
+    console.log("AppSettings.save() finished.");
+
+    console.log("Calling updateGrid()..."); // ★ グリッド更新呼び出し確認
+    updateGrid(columns); // グリッド表示を更新
+    console.log("updateGrid() finished.");
   } else {
     console.warn("Invalid column value entered:", columnsInput.value);
   }
 }
 
 function updateGrid(columns = null) {
+  console.log(`updateGrid called. columns param: ${columns}`); // ★ 呼び出し確認
+  // AppSettings.values.columns から確実に値を取得する
   const colsToUse = columns !== null ? columns : AppSettings.values.columns;
+  console.log(`Using columns: ${colsToUse}`); // ★ 使用する列数確認
+
+  // elements.columnsInput が存在するか確認 (min/max取得のため)
+  if (!elements.columnsInput) {
+    console.error("columnsInput element not found in updateGrid");
+    return;
+  }
   const minCols = parseInt(elements.columnsInput.min, 10);
   const maxCols = parseInt(elements.columnsInput.max, 10);
-  const validColsToUse = Math.max(minCols, Math.min(maxCols, colsToUse));
-  elements.speedDialGrid.style.gridTemplateColumns = `repeat(${validColsToUse}, 1fr)`;
+
+  // 念のためここでもバリデーション/範囲制限
+  const validColsToUse = Math.max(
+    minCols || 1,
+    Math.min(maxCols || 15, colsToUse || AppSettings.defaults.columns)
+  );
+  console.log(`Valid columns to use: ${validColsToUse}`); // ★ 最終的な列数確認
+
+  // elements.speedDialGrid が存在するか確認
+  if (elements.speedDialGrid) {
+    const gridTemplateColumnsValue = `repeat(${validColsToUse}, 1fr)`;
+    console.log(`Setting gridTemplateColumns to: ${gridTemplateColumnsValue}`); // ★ 設定値確認
+    elements.speedDialGrid.style.gridTemplateColumns = gridTemplateColumnsValue;
+  } else {
+    console.error("speedDialGrid element not found in updateGrid");
+  }
 }
 
 function createInitialIcon(name) {
@@ -2288,46 +2644,88 @@ async function fetchAndCacheFavicon() {
 }
 
 function saveSpeedDial() {
+  console.log("saveSpeedDial function called"); // ★ 関数呼び出し確認
+
   const name = elements.siteNameInput.value.trim();
   const url = elements.siteUrlInput.value.trim();
+  console.log("Saving:", { name, url }); // ★ 入力値確認
 
+  // --- バリデーション ---
   if (!name || !url) {
     alert("サイト名とURLは必須です。");
+    console.log("Validation failed: Name or URL is empty."); // ★ バリデーション失敗ログ
     return;
   }
   if (!isValidHttpUrl(url)) {
     alert("有効なURL形式 (http(s)://...) を入力してください。");
+    console.log("Validation failed: Invalid URL format."); // ★ バリデーション失敗ログ
     return;
   }
+  console.log("Validation passed."); // ★ バリデーション通過ログ
 
+  // --- アイコンデータの決定 ---
   let finalIcon = null;
   if (state.manualIconDataUrl) {
     finalIcon = state.manualIconDataUrl;
+    console.log("Using manual icon.");
   } else if (state.fetchedIconUrl) {
     finalIcon = state.fetchedIconUrl;
+    console.log("Using fetched icon.");
   } else if (
     state.editingIndex > -1 &&
-    AppSettings.values.speedDial[state.editingIndex].icon &&
-    !elements.siteIconInput.files[0]
+    AppSettings.values.speedDial[state.editingIndex]?.icon && // Optional chaining
+    !elements.siteIconInput.files[0] // ファイルが新たに選択されていない場合
   ) {
+    // 編集モードで、既存のアイコンがあり、新しいファイルが選択されていない場合は既存アイコンを維持
     finalIcon = AppSettings.values.speedDial[state.editingIndex].icon;
-  }
-
-  // ★★★ 現在の調整値を取得 ★★★
-  const adjustmentData = { ...state.currentAdjustment };
-
-  // ★★★ 新しいアイテムデータに adjustment を含める ★★★
-  const newItem = { name, url, icon: finalIcon, adjustment: adjustmentData };
-
-  if (state.editingIndex > -1) {
-    AppSettings.values.speedDial[state.editingIndex] = newItem;
+    console.log("Keeping existing icon during edit.");
   } else {
-    AppSettings.values.speedDial.push(newItem);
+    console.log(
+      "No specific icon set, will use null (or let creation handle initials)."
+    );
   }
 
-  AppSettings.setSpeedDial(AppSettings.values.speedDial);
+  // --- 調整値の取得 ---
+  const adjustmentData = { ...state.currentAdjustment };
+  console.log("Adjustment data:", adjustmentData);
+
+  // --- 新しいアイテムデータの作成 ---
+  const newItem = { name, url, icon: finalIcon, adjustment: adjustmentData };
+  console.log("New item data:", newItem);
+
+  // --- 配列への追加または更新 ---
+  if (state.editingIndex > -1) {
+    // 編集モード
+    if (AppSettings.values.speedDial[state.editingIndex]) {
+      // 念のためインデックス存在確認
+      AppSettings.values.speedDial[state.editingIndex] = newItem;
+      console.log(`Updated item at index ${state.editingIndex}`);
+    } else {
+      console.error(
+        `Error updating: Index ${state.editingIndex} not found in speedDial array.`
+      );
+      alert("エラーが発生しました。アイテムの更新に失敗しました。");
+      return; // エラー発生時は中断
+    }
+  } else {
+    // 新規追加モード
+    AppSettings.values.speedDial.push(newItem);
+    console.log("Added new item to speedDial array.");
+  }
+
+  // --- localStorageへの保存 ---
+  console.log("Calling AppSettings.save()...");
+  AppSettings.save(); // ★ save() を呼び出す (setSpeedDialは不要)
+  console.log("AppSettings.save() finished.");
+
+  // --- UIの更新とモーダルを閉じる ---
+  console.log("Calling renderSpeedDial()...");
   renderSpeedDial();
+  console.log("renderSpeedDial() finished.");
+
+  console.log("Calling closeModal()...");
   closeModal();
+  console.log("closeModal() finished.");
 }
 
 function closeModal() {
@@ -2538,6 +2936,7 @@ function openEngineModal() {
   elements.engineNicknameInput.disabled = false;
   elements.addEngineButtonText.textContent = "エンジンを追加";
   renderEngineList();
+  renderDefaultEngineSelectors();
   elements.engineModal.classList.add("visible");
   feather.replace();
 }
@@ -2590,6 +2989,7 @@ function renderEngineList() {
   elements.engineList.appendChild(fragment);
   feather.replace();
   initHelpContent();
+  renderDefaultEngineSelectors();
 }
 
 function openEditEngineModal(nickname) {
