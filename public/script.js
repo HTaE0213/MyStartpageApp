@@ -2005,35 +2005,39 @@ function applySuggestionToBox(suggestion) {
     `[applySuggestionToBox] Setting input value to: "${newValue}" (Engine: ${engineToUse}, Suggestion: ${suggestion})`
   );
 
-  // 値を設定
-  elements.searchInput.value = newValue;
+  // --- ★ IME未確定文字列を強制的に確定させる ---
+  // Android/モバイルの日本語IMEで未確定文字列が残る問題への対策
+  // 「blur → 値セット → focus」の順でIMEをリセット
+  // 一部Androidでは setTimeout で遅延させた方が確実に確定される場合あり
+  elements.searchInput.blur();
+  setTimeout(() => {
+    elements.searchInput.value = newValue;
 
-  // ★★★ input イベントを手動で発火させる ★★★
-  // これにより、IMEや他のリスナーが値の変更を検知し、未確定文字がクリアされることを期待する
-  try {
-    const inputEvent = new Event("input", { bubbles: true, cancelable: true });
-    elements.searchInput.dispatchEvent(inputEvent);
-    console.log("[applySuggestionToBox] Dispatched input event.");
-  } catch (e) {
-    console.error("[applySuggestionToBox] Error dispatching input event:", e);
-  }
-  // ★★★ ここまで追加 ★★★
+    // input イベントを手動で発火
+    try {
+      const inputEvent = new Event("input", {
+        bubbles: true,
+        cancelable: true,
+      });
+      elements.searchInput.dispatchEvent(inputEvent);
+      console.log("[applySuggestionToBox] Dispatched input event.");
+    } catch (e) {
+      console.error("[applySuggestionToBox] Error dispatching input event:", e);
+    }
 
-  // フォーカスを維持し、カーソルを末尾に移動
-  try {
+    // 再フォーカスしてカーソルを末尾へ
     elements.searchInput.focus();
     elements.searchInput.selectionStart = elements.searchInput.selectionEnd =
       elements.searchInput.value.length;
-  } catch (e) {
-    console.warn("Error during focus or setting selection range:", e);
-  }
 
-  elements.suggestionsContainer.style.display = "none";
-  state.originalInputValue = elements.searchInput.value;
-  updateClearButtonVisibility();
-  updateActionButtonState();
-  updateSuggestions(); // サジェスト更新はイベント発火後の方が良いかもしれない
+    elements.suggestionsContainer.style.display = "none";
+    state.originalInputValue = elements.searchInput.value;
+    updateClearButtonVisibility();
+    updateActionButtonState();
+    updateSuggestions();
+  }, 30); // 30ms程度遅延（機種によっては10〜100ms最適値調整可）
 }
+
 
 function executeSearchWithSuggestion(suggestion) {
   console.log(`Executing search with suggestion: ${suggestion}`); // デバッグ用ログ
