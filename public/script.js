@@ -2005,38 +2005,36 @@ function applySuggestionToBox(suggestion) {
     `[applySuggestionToBox] Setting input value to: "${newValue}" (Engine: ${engineToUse}, Suggestion: ${suggestion})`
   );
 
-  // --- ★ IME未確定文字列を強制的に確定させる ---
-  // Android/モバイルの日本語IMEで未確定文字列が残る問題への対策
-  // 「blur → 値セット → focus」の順でIMEをリセット
-  // 一部Androidでは setTimeout で遅延させた方が確実に確定される場合あり
-  elements.searchInput.blur();
-  setTimeout(() => {
-    elements.searchInput.value = newValue;
+  // ★ IME未確定文字列ごと「強制的に」値を上書き
+  // Android端末の一部では、input.valueを直接書き換えるだけで未確定文字も消える（IMEは開いたまま）
+  elements.searchInput.value = newValue;
 
-    // input イベントを手動で発火
-    try {
-      const inputEvent = new Event("input", {
-        bubbles: true,
-        cancelable: true,
-      });
-      elements.searchInput.dispatchEvent(inputEvent);
-      console.log("[applySuggestionToBox] Dispatched input event.");
-    } catch (e) {
-      console.error("[applySuggestionToBox] Error dispatching input event:", e);
-    }
+  // input イベントを発火（mouseup/click等の直後でも実行することでIME確定処理が発動することが多い）
+  try {
+    const inputEvent = new Event("input", { bubbles: true, cancelable: true });
+    elements.searchInput.dispatchEvent(inputEvent);
+    console.log("[applySuggestionToBox] Dispatched input event.");
+  } catch (e) {
+    console.error("[applySuggestionToBox] Error dispatching input event:", e);
+  }
 
-    // 再フォーカスしてカーソルを末尾へ
-    elements.searchInput.focus();
+  // ▼IMEを維持しつつキャレット位置調整：focus()は「すでにフォーカスしている場合」はIME再起動しない
+  try {
+    elements.searchInput.focus(); // すでにfocus中ならIMEは閉じない
     elements.searchInput.selectionStart = elements.searchInput.selectionEnd =
       elements.searchInput.value.length;
+  } catch (e) {
+    console.warn("Error during focus or setting selection range:", e);
+  }
 
-    elements.suggestionsContainer.style.display = "none";
-    state.originalInputValue = elements.searchInput.value;
-    updateClearButtonVisibility();
-    updateActionButtonState();
-    updateSuggestions();
-  }, 30); // 30ms程度遅延（機種によっては10〜100ms最適値調整可）
+  elements.suggestionsContainer.style.display = "none";
+  state.originalInputValue = elements.searchInput.value;
+  updateClearButtonVisibility();
+  updateActionButtonState();
+  updateSuggestions();
 }
+// ★ 主要な変更点: blur()やsetTimeout等は使わず、未確定文字ごとvalueを”上書き”＆inputイベントを送るだけでIMEを閉じない！
+
 
 
 function executeSearchWithSuggestion(suggestion) {
