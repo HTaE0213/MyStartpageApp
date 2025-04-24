@@ -1253,11 +1253,26 @@ function setupEventListeners() {
     elements.fetchTitleButton.addEventListener("click", handleFetchTitle); // ★ 専用のハンドラ関数を呼び出す
   }
 
-  // ★ モバイル用検索フォーカスボタンのリスナーを追加
+  // ★ モバイル用検索フォーカスボタンのリスナーを修正
   if (elements.mobileSearchFocusButton) {
     elements.mobileSearchFocusButton.addEventListener("click", () => {
       if (elements.searchInput) {
-        elements.searchInput.focus();
+        // ★ 現在フォーカスされている要素が検索ボックスかどうかを判定
+        if (document.activeElement === elements.searchInput) {
+          // ★ フォーカスが合っている場合は検索を実行
+          console.log(
+            "[Mobile Focus Button] Search input focused, executing search."
+          );
+          executeSearch();
+        } else {
+          // ★ フォーカスが合っていない場合は検索ボックスにフォーカスを当てる
+          console.log("[Mobile Focus Button] Focusing on search input.");
+          elements.searchInput.focus();
+          // 必要であれば、フォーカス後に要素が見えるようにスクロール調整
+          // elements.searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else {
+        console.warn("[Mobile Focus Button] Search input element not found.");
       }
     });
   }
