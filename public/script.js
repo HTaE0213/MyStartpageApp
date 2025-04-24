@@ -2005,19 +2005,41 @@ function applySuggestionToBox(suggestion) {
     `[applySuggestionToBox] Setting input value to: "${newValue}" (Engine: ${engineToUse}, Suggestion: ${suggestion})`
   );
 
+  // 値を設定する前に、IMEの未確定状態をクリアする試み
+  try {
+    // 現在の選択範囲をリセット
+    elements.searchInput.focus();
+    elements.searchInput.setSelectionRange(
+      0,
+      elements.searchInput.value.length
+    );
+    // 選択範囲を削除（未確定文字をクリアする効果を期待）
+    document.execCommand("delete", false);
+    console.log(
+      "[applySuggestionToBox] Attempted to clear IME composition state."
+    );
+  } catch (e) {
+    console.warn("[applySuggestionToBox] Error clearing IME state:", e);
+  }
+
   // 値を設定
   elements.searchInput.value = newValue;
 
-  // ★★★ input イベントを手動で発火させる ★★★
-  // これにより、IMEや他のリスナーが値の変更を検知し、未確定文字がクリアされることを期待する
+  // ★ input イベントと compositionend イベントを手動で発火させる
   try {
     const inputEvent = new Event("input", { bubbles: true, cancelable: true });
     elements.searchInput.dispatchEvent(inputEvent);
     console.log("[applySuggestionToBox] Dispatched input event.");
+    // IMEの確定をシミュレートするイベント
+    const compositionEndEvent = new Event("compositionend", {
+      bubbles: true,
+      cancelable: true,
+    });
+    elements.searchInput.dispatchEvent(compositionEndEvent);
+    console.log("[applySuggestionToBox] Dispatched compositionend event.");
   } catch (e) {
-    console.error("[applySuggestionToBox] Error dispatching input event:", e);
+    console.error("[applySuggestionToBox] Error dispatching events:", e);
   }
-  // ★★★ ここまで追加 ★★★
 
   // フォーカスを維持し、カーソルを末尾に移動
   try {
@@ -2032,8 +2054,16 @@ function applySuggestionToBox(suggestion) {
   state.originalInputValue = elements.searchInput.value;
   updateClearButtonVisibility();
   updateActionButtonState();
-  updateSuggestions(); // サジェスト更新はイベント発火後の方が良いかもしれない
+  updateSuggestions(); // サジェスト更新はイベント発火後に行う
+  // ★ IMEの問題を軽減するため、短い遅延後に再度フォーカスとカーソル位置を調整
+  setTimeout(() => {
+    elements.searchInput.focus();
+    elements.searchInput.selectionStart = elements.searchInput.selectionEnd =
+      elements.searchInput.value.length;
+    console.log("[applySuggestionToBox] Re-focused input after delay.");
+  }, 10);
 }
+
 
 function executeSearchWithSuggestion(suggestion) {
   console.log(`Executing search with suggestion: ${suggestion}`); // デバッグ用ログ
