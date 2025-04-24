@@ -981,12 +981,10 @@ body.edit-mode .speed-dial-item-buttons {
 #mobileSearchFocusButton {
   display: none; /* デフォルト非表示 */
   position: fixed;
-  bottom: 20px; /* 下からの基本位置 */
-  /* right: 20px; を削除 */
-  left: 50%; /* ★ 画面の左端から50%の位置に配置 */
-  transform: translateX(
-    -50%
-  ); /* ★ ボタン自身の幅の半分だけ左にずらして中央揃え */
+  /* bottom: 20px; を変更 */
+  bottom: 30px; /* ★ 下からの距離を少し増やす (例: 30px) */
+  left: 50%;
+  transform: translateX(-50%);
   width: 56px;
   height: 56px;
   /* background-color: var(--accent-color); を修正 (変数が未定義のため) */
@@ -1002,6 +1000,7 @@ body.edit-mode .speed-dial-item-buttons {
   align-items: center;
   justify-content: center;
   transition: transform 0.2s ease-out; /* ホバー/アクティブ時のアニメーション用 */
+  bottom: calc(30px + env(safe-area-inset-bottom, 0px)); /* ★ セーフエリア分を考慮 */
 }
 
 #mobileSearchFocusButton:active {
@@ -1504,8 +1503,8 @@ body.edit-mode .speed-dial-item-buttons {
   body,
   .container {
     /* 必要に応じて調整 */
-    /* ボタンの高さ + オフセット + セーフエリア */
-    padding-bottom: calc(56px + 20px + env(safe-area-inset-bottom, 0px));
+    /* ボタンの高さ(56px) + 新しいオフセット(30px) + セーフエリア + ★ツールバー想定マージン(例: 20px) */
+        padding-bottom: calc(56px + 30px + env(safe-area-inset-bottom, 0px) + 20px);
   }
   /* ★ 上部ノッチ対応 */
   body,
