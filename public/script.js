@@ -2005,11 +2005,11 @@ function applySuggestionToBox(suggestion) {
     `[applySuggestionToBox] Setting input value to: "${newValue}" (Engine: ${engineToUse}, Suggestion: ${suggestion})`
   );
 
-  // ★ IME未確定文字列ごと「強制的に」値を上書き
-  // Android端末の一部では、input.valueを直接書き換えるだけで未確定文字も消える（IMEは開いたまま）
+  // 値を設定
   elements.searchInput.value = newValue;
 
-  // input イベントを発火（mouseup/click等の直後でも実行することでIME確定処理が発動することが多い）
+  // ★★★ input イベントを手動で発火させる ★★★
+  // これにより、IMEや他のリスナーが値の変更を検知し、未確定文字がクリアされることを期待する
   try {
     const inputEvent = new Event("input", { bubbles: true, cancelable: true });
     elements.searchInput.dispatchEvent(inputEvent);
@@ -2017,10 +2017,11 @@ function applySuggestionToBox(suggestion) {
   } catch (e) {
     console.error("[applySuggestionToBox] Error dispatching input event:", e);
   }
+  // ★★★ ここまで追加 ★★★
 
-  // ▼IMEを維持しつつキャレット位置調整：focus()は「すでにフォーカスしている場合」はIME再起動しない
+  // フォーカスを維持し、カーソルを末尾に移動
   try {
-    elements.searchInput.focus(); // すでにfocus中ならIMEは閉じない
+    elements.searchInput.focus();
     elements.searchInput.selectionStart = elements.searchInput.selectionEnd =
       elements.searchInput.value.length;
   } catch (e) {
@@ -2031,11 +2032,8 @@ function applySuggestionToBox(suggestion) {
   state.originalInputValue = elements.searchInput.value;
   updateClearButtonVisibility();
   updateActionButtonState();
-  updateSuggestions();
+  updateSuggestions(); // サジェスト更新はイベント発火後の方が良いかもしれない
 }
-// ★ 主要な変更点: blur()やsetTimeout等は使わず、未確定文字ごとvalueを”上書き”＆inputイベントを送るだけでIMEを閉じない！
-
-
 
 function executeSearchWithSuggestion(suggestion) {
   console.log(`Executing search with suggestion: ${suggestion}`); // デバッグ用ログ
