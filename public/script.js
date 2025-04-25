@@ -1256,24 +1256,25 @@ function setupEventListeners() {
   // ★ モバイル用検索フォーカスボタンのリスナーを修正
   if (elements.mobileSearchFocusButton) {
     elements.mobileSearchFocusButton.addEventListener("click", () => {
-      if (elements.searchInput) {
-        // ★ 現在フォーカスされている要素が検索ボックスかどうかを判定
-        if (document.activeElement === elements.searchInput) {
-          // ★ フォーカスが合っている場合は検索を実行
-          console.log(
-            "[Mobile Focus Button] Search input focused, executing search."
-          );
-          executeSearch();
+      // ★ 処理全体を setTimeout でラップし、イベント処理の競合を避ける
+      setTimeout(() => {
+        if (elements.searchInput) {
+          // ★ 現在フォーカスされている要素が検索ボックスかどうかを判定
+          if (document.activeElement === elements.searchInput) {
+            // ★ フォーカスが合っている場合は検索を実行
+            console.log(
+              "[Mobile Focus Button] Search input focused, executing search."
+            );
+            executeSearch();
+          } else {
+            // ★ フォーカスが合っていない場合は検索ボックスにフォーカスを当てる
+            console.log("[Mobile Focus Button] Focusing on search input.");
+            elements.searchInput.focus();
+          }
         } else {
-          // ★ フォーカスが合っていない場合は検索ボックスにフォーカスを当てる
-          console.log("[Mobile Focus Button] Focusing on search input.");
-          elements.searchInput.focus();
-          // 必要であれば、フォーカス後に要素が見えるようにスクロール調整
-          // elements.searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          console.warn("[Mobile Focus Button] Search input element not found.");
         }
-      } else {
-        console.warn("[Mobile Focus Button] Search input element not found.");
-      }
+      }, 0); // 0ミリ秒の遅延で、現在のイベントサイクルの直後に実行
     });
   }
 
