@@ -999,7 +999,9 @@ body.edit-mode .speed-dial-item-buttons {
   cursor: pointer;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s ease-out; /* ホバー/アクティブ時のアニメーション用 */
+  transition: transform 0.2s ease-out;
+  /* ★ ダブルタップズームなどの干渉を防ぐ */
+  touch-action: manipulation;
   bottom: calc(30px + env(safe-area-inset-bottom, 0px)); /* ★ セーフエリア分を考慮 */
 }
 
