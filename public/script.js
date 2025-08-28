@@ -1981,13 +1981,31 @@ function displaySuggestions(suggestions) {
     item.appendChild(arrowButton);
 
     item.addEventListener("mousedown", (event) => {
-      // ★ イベントを 'click' から 'mousedown' に変更
-      event.preventDefault(); // ★ デフォルトのmousedown動作（テキスト選択やフォーカス移動など）を抑制し、IME確定の妨げになる可能性を減らす
-      console.log(`Suggestion item mousedown: ${suggestionText}`); // デバッグ用ログ
-      // setTimeout は維持。mousedown の直後に実行されるようにする
-      setTimeout(() => {
-        executeSearchWithSuggestion(suggestionText);
-      }, 0);
+      // ★ mousedown時の処理を変更
+      event.preventDefault(); // フォーカスが外れるのを防ぐ
+
+      // 1. 元の入力からプレフィックスを取得
+      const parts = state.originalInputValue.split(" ");
+      const potentialNickname = parts[0].toLowerCase();
+      let prefix = null;
+      if (AppSettings.values.engines[potentialNickname]) {
+          prefix = potentialNickname;
+      }
+
+      // 2. 新しい入力値を構築
+      const newValue = prefix ? `${prefix} ${suggestionText}` : suggestionText;
+
+      // 3. 入力値を設定し、IME確定を促すinputイベントを発火
+      elements.searchInput.value = newValue;
+      try {
+        const inputEvent = new Event("input", { bubbles: true, cancelable: true });
+        elements.searchInput.dispatchEvent(inputEvent);
+      } catch (e) {
+        console.error("Error dispatching input event:", e);
+      }
+
+      // 4. 構築した入力値で検索を実行
+      executeSearch();
     });
 
     fragment.appendChild(item);
