@@ -2287,47 +2287,77 @@ function updateSelectedSuggestion(suggestions) {
 
 // --- Clipboard Processing ---
 async function processClipboard() {
-  console.log("[processClipboard] Attempting to read clipboard..."); // ★ デバッグログ追加
-  console.log("[processClipboard] Current protocol:", location.protocol); // ★ プロトコル確認ログ
+  console.log("[processClipboard] Attempting to read clipboard...");
 
-  // --- HTTPS接続チェックを先に行う ---
-  if (location.protocol !== "https:") {
-    console.error("[processClipboard] Clipboard API requires HTTPS.");
-    alert(
-      "クリップボード機能を利用するには、安全な接続 (HTTPS) が必要です。\n現在の接続は " +
-        location.protocol +
-        " です。"
-    );
-    return; // HTTPSでない場合はここで処理終了
-  }
+  // --- 1. Secure Context & Protocol Check ---
+  const isSecure = window.isSecureContext || 
+                   location.protocol === 'https:' || 
+                   location.hostname === 'localhost' || 
+                   location.hostname === '127.0.0.1';
 
-  // --- クリップボードAPIの存在チェック ---
-  if (!navigator.clipboard || !navigator.clipboard.readText) {
-    console.error("[processClipboard] Clipboard API (readText) not supported.");
-    alert("お使いのブラウザはクリップボードの読み取りに対応していません。");
+  // エラー時の共通処理関数
+  const handleClipboardFailure = (reason, showAlert = true) => {
+    console.warn(`[processClipboard] Failed: ${reason}`);
+    
+    // ★ 改善: エラー時は即座に検索ボックスにフォーカスを移動し、手動ペーストを促す
+    if (elements.searchInput) {
+      elements.searchInput.focus();
+      // 一瞬遅らせて選択状態にする（上書きしやすくする）
+      setTimeout(() => elements.searchInput.select(), 50);
+    }
+
+    if (showAlert) {
+      // メッセージを「権限エラー」ではなく「自動読み取り不可」というニュアンスに変更
+      alert("ブラウザの制限によりクリップボードを自動で読み取れませんでした。\n検索ボックスにフォーカスしましたので、長押しして貼り付けてください。");
+    }
+  };
+
+  if (!isSecure) {
+    handleClipboardFailure("Insecure context");
     return;
   }
 
-  // --- クリップボード読み取り実行 ---
+  // --- 2. Clipboard API Availability Check ---
+  if (!navigator.clipboard || !navigator.clipboard.readText) {
+    handleClipboardFailure("API not supported");
+    return;
+  }
+
+  // --- 3. Read Clipboard ---
   try {
-    console.log("[processClipboard] Calling navigator.clipboard.readText()..."); // ★ API呼び出し前ログ
-    const text = await navigator.clipboard.readText(); // ★ ここで権限要求が行われるはず
-    console.log("[processClipboard] Clipboard read successfully."); // ★ 成功ログ
+    console.log("[processClipboard] Calling navigator.clipboard.readText()...");
+    const text = await navigator.clipboard.readText();
+    console.log("[processClipboard] Clipboard read successfully.");
 
     if (!text) {
-      console.log("[processClipboard] Clipboard is empty.");
-      return; // クリップボードが空なら終了
+      alert("クリップボードは空です。");
+      return;
     }
 
-    const trimmedText = text.trim();
-    console.log("[processClipboard] Clipboard content:", trimmedText); // ★ 内容ログ
+    // --- 4. Sanitize Text ---
+    // 改行をスペースに置換し、前後の空白を削除
+    const trimmedText = text.replace(/[\r\n]+/g, " ").trim();
+    console.log("[processClipboard] Processed content:", trimmedText);
 
-    // --- URLかどうかの判定と処理 (変更なし) ---
+    if (!trimmedText) return;
+
+    // --- 5. Detect URL ---
     const isUrl =
       /^(https?:\/\/|www\.)/i.test(trimmedText) ||
       (trimmedText.includes(".") && !trimmedText.includes(" "));
 
+    // 遷移前に検索ボックスをクリアする共通処理 (Rainsee等のキャッシュ対策)
+    const prepareForNavigation = () => {
+      elements.searchInput.value = "";
+      updateClearButtonVisibility();
+      updateActionButtonState();
+      if (elements.suggestionsContainer) {
+        elements.suggestionsContainer.style.display = "none";
+      }
+    };
+
     if (isUrl) {
+      // URLの場合は即座に遷移
       let url = trimmedText;
       if (
         !trimmedText.startsWith("http://") &&
@@ -2336,55 +2366,39 @@ async function processClipboard() {
         url = "https://" + trimmedText;
       }
       console.log("[processClipboard] Navigating to URL:", url);
+      
+      prepareForNavigation();
       window.location.href = url;
     } else {
-      console.log("[processClipboard] Treating as search term:", trimmedText);
-      const defaultEngineKey = AppSettings.values.engines["g"]
-        ? "g"
-        : Object.keys(AppSettings.values.engines)[0];
-      if (defaultEngineKey && AppSettings.values.engines[defaultEngineKey]) {
-        const searchUrl = AppSettings.values.engines[
-          defaultEngineKey
-        ].url.replace(/%s/g, encodeURIComponent(trimmedText)); // ★ trimmedText を使用
-        console.log(
-          "[processClipboard] Executing search with default engine:",
-          searchUrl
-        );
+      // テキストの場合も即座に検索を実行する (Paste & Go)
+      console.log("[processClipboard] Executing search for text:", trimmedText);
+
+      // デフォルトの検索エンジンを取得
+      const defaultEngineNickname = AppSettings.getDefaultSearchEngine();
+      const engine = AppSettings.values.engines[defaultEngineNickname];
+
+      if (engine) {
+        const searchUrl = engine.url.replace(/%s/g, encodeURIComponent(trimmedText));
+        
+        prepareForNavigation();
         window.location.href = searchUrl;
       } else {
-        console.error("[processClipboard] Default search engine not found.");
-        alert("デフォルトの検索エンジン (g) が設定されていません。");
+        // 万が一エンジンが見つからない場合は入力欄に入れる
+        console.error("[processClipboard] Default engine not found.");
+        elements.searchInput.value = trimmedText;
+        elements.searchInput.focus();
       }
     }
   } catch (err) {
-    // --- エラーハンドリング ---
     console.error(
       "[processClipboard] Error reading clipboard:",
       err.name,
       err.message,
       err
-    ); // ★ エラー詳細ログ
-    let message = "クリップボードの読み取りに失敗しました。";
-
-    if (err.name === "NotAllowedError") {
-      // ユーザーが許可しなかった場合、または設定でブロックされている可能性
-      message += "\nクリップボードへのアクセス許可が必要です。";
-      // モバイルの場合、ブラウザの設定やOSの設定を確認するよう促す
-      if (window.matchMedia("(max-width: 768px)").matches) {
-        message +=
-          "\nブラウザアプリの権限設定やOSのプライバシー設定を確認してください。";
-      } else {
-        message +=
-          "\nブラウザのアドレスバー付近に表示される権限アイコンを確認するか、サイト設定をご確認ください。";
-      }
-    } else if (err.name === "SecurityError") {
-      message +=
-        "\nセキュリティ上の理由でアクセスがブロックされました。ページがアクティブでない場合などに発生することがあります。";
-    } else {
-      // その他のエラー (NotFoundError なども含む)
-      message += "\n予期せぬエラーが発生しました (" + err.name + ")。";
-    }
-    alert(message);
+    );
+    
+    // エラーの種類に関わらず、まずは手動入力を促す処理へ回す
+    handleClipboardFailure(`Exception: ${err.name}`, true);
   }
 }
 
