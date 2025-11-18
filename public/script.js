@@ -2001,7 +2001,8 @@ function displaySuggestions(suggestions) {
 
 function applySuggestionToBox(suggestion) {
   const engineToUse = state.actualEngine;
-  const newValue = `${engineToUse} ${suggestion}`;
+  // ★ 変更: 末尾に半角スペースを追加して、次の単語を入力しやすくする
+  const newValue = `${engineToUse} ${suggestion} `;
   
   // ★ 修正: IME未確定入力がある状態で値を書き換えると、未確定部分が残ることがあるため、
   // 先にフォーカスを外してIMEを確定させる。
