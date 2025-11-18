@@ -2052,6 +2052,14 @@ function executeSearchWithSuggestion(suggestion) {
   );
   if (searchUrl) {
     console.log(`Navigating to: ${searchUrl}`); // デバッグ用ログ
+    
+    // ★★★ Rainsee等でのキャッシュ対策：遷移直前に入力をクリア ★★★
+    // これにより、ブラウザバックやホームページに戻った際に入力欄がリセットされた状態になります
+    elements.searchInput.value = "";
+    updateClearButtonVisibility();
+    updateActionButtonState();
+    elements.suggestionsContainer.style.display = "none";
+    
     window.location.href = searchUrl;
   } else {
     console.error(
@@ -2086,6 +2094,12 @@ function executeSearch() {
     try {
       // ★ 念のため、URLとして有効か最終チェック (無効なら検索にフォールバック)
       new URL(urlToNavigate); // これがエラーを投げなければ有効な形式
+      
+      // ★★★ 遷移前にクリア (URL遷移の場合もリセットしておく) ★★★
+      elements.searchInput.value = "";
+      updateClearButtonVisibility();
+      updateActionButtonState();
+
       window.location.href = urlToNavigate;
       return; // URLへ遷移したのでここで終了
     } catch (e) {
@@ -2154,6 +2168,14 @@ function executeSearch() {
   // --- 生成された検索URLへ遷移 ---
   if (searchUrl) {
     console.log("[executeSearch] Navigating to search URL:", searchUrl);
+    
+    // ★★★ Rainsee等でのキャッシュ対策：遷移直前に入力をクリア ★★★
+    elements.searchInput.value = "";
+    state.lastQuery = ""; // 状態もリセット
+    updateClearButtonVisibility();
+    updateActionButtonState();
+    elements.suggestionsContainer.style.display = "none";
+
     window.location.href = searchUrl;
   } else {
     // 通常ここには到達しないはずだが、念のため
