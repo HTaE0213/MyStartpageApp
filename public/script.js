@@ -3743,3 +3743,62 @@ function getDomainFromUrl(url) {
 
 // --- Initialize Application ---
 init();
+
+// --- Rainsee Browser Adaptation ---
+// Rainsee Browserのホームページ没入効果に対応するための関数
+// ブラウザがページをロードする際に window.rainseeHomeEvent(top, bottom) を呼び出します
+window.rainseeHomeEvent = function(top, bottom) {
+  // top: ステータスバー等の上部領域の高さ
+  // bottom: ナビゲーションバー等の下部領域の高さ
+  
+  // 既存の左右のpadding設定を維持するため、paddingTopとpaddingBottomのみを設定します
+  if (document.body) {
+    document.body.style.paddingTop = `${top}px`;
+    document.body.style.paddingBottom = `${bottom}px`;
+  }
+
+  /* // もし「すりガラス（毛玻璃）」効果の方を使用したい場合は、
+  // 上記の document.body.style... の部分をコメントアウトし、以下のコードを使用してください。
+
+  function addBottomFrostedDiv(height) {
+    const h = (typeof height === 'number') ? `${height}px` : height;
+    let div = document.getElementById('bottom-frosted-div');
+
+    if (!div) {
+      // 初回のみdivを作成
+      div = document.createElement('div');
+      div.id = 'bottom-frosted-div';
+      Object.assign(div.style, {
+        position: 'fixed',
+        left: '0',
+        right: '0',
+        bottom: '0',
+        background: 'rgba(255, 255, 255, 0.6)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        zIndex: '9999',
+        boxSizing: 'border-box'
+      });
+      document.body.appendChild(div);
+
+      // 元の body padding-bottom を記録
+      const prevPadding = window.getComputedStyle(document.body).paddingBottom;
+      if (!document.body.dataset._origPaddingBottom) {
+        document.body.dataset._origPaddingBottom = prevPadding;
+      }
+    }
+
+    // 高さを更新
+    div.style.height = h;
+    document.body.style.paddingBottom =
+      `calc(${document.body.dataset._origPaddingBottom || '0px'} + ${h})`;
+
+    return div;
+  }
+  
+  // 上部のパディングは常に適用
+  document.body.style.paddingTop = `${top}px`;
+  // 下部はすりガラス効果で適用
+  addBottomFrostedDiv(bottom);
+  */
+};
