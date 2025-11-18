@@ -1088,7 +1088,7 @@ function setupEventListeners() {
     // --- URLが有効な場合のみ自動取得を実行 ---
     if (isValidHttpUrl(url)) {
       console.log(
-        "[URL Blur] URL is valid, attempting to fetch title and favicon..."
+        "https://www.youtube.com/channel/UCLdfTpBoh9G_DI3OURnIFOQ URL is valid, attempting to fetch title and favicon..."
       );
 
       // --- ローディング表示開始 ---
@@ -1104,7 +1104,7 @@ function setupEventListeners() {
           fetchFaviconFromUrl(url),
         ]);
 
-        console.log("[URL Blur] Fetch results:", {
+        console.log("https://www.youtube.com/channel/UCLdfTpBoh9G_DI3OURnIFOQ Fetch results:", {
           fetchedTitle,
           hasFavicon: !!fetchedFaviconDataUrl,
         });
@@ -1130,7 +1130,7 @@ function setupEventListeners() {
         );
       } catch (error) {
         // Promise.all でエラーが発生した場合 (通常は各fetch関数内で処理されるはず)
-        console.error("[URL Blur] Error during parallel fetch:", error);
+        console.error("https://www.youtube.com/channel/UCLdfTpBoh9G_DI3OURnIFOQ Error during parallel fetch:", error);
         // エラー時も最終的なプレビューは更新しておく
         updateFaviconPreview(
           state.manualIconDataUrl,
@@ -1141,7 +1141,7 @@ function setupEventListeners() {
         setModalLoadingState(false); // ★ ローディング状態を解除
       }
     } else {
-      console.log("[URL Blur] URL is invalid or empty.");
+      console.log("https://www.youtube.com/channel/UCLdfTpBoh9G_DI3OURnIFOQ URL is invalid or empty.");
       // URLが無効な場合、取得済みアイコンがあればクリアするなどの処理が必要か検討
       if (!state.manualIconDataUrl) {
         // 手動アイコンがなければ
@@ -2002,6 +2002,13 @@ function displaySuggestions(suggestions) {
 function applySuggestionToBox(suggestion) {
   const engineToUse = state.actualEngine;
   const newValue = `${engineToUse} ${suggestion}`;
+  
+  // ★ 修正: IME未確定入力がある状態で値を書き換えると、未確定部分が残ることがあるため、
+  // 先にフォーカスを外してIMEを確定させる。
+  if (document.activeElement === elements.searchInput) {
+      elements.searchInput.blur();
+  }
+
   console.log(
     `[applySuggestionToBox] Setting input value to: "${newValue}" (Engine: ${engineToUse}, Suggestion: ${suggestion})`
   );
