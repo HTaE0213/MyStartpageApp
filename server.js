@@ -4,9 +4,28 @@ const path = require("path");
 const cheerio = require("cheerio"); // ファビコン取得で使用
 // ★ Node.js v18未満で fetch を使う場合は node-fetch が必要
 // const fetch = require('node-fetch'); // Node.js v18未満の場合コメント解除
+const mongoose = require('mongoose');
 
 const app = express();
 const port = process.env.PORT || 8000; // Render が指定するポート or ローカル用8000
+
+// --- ★ 追加: MongoDB接続設定 ---
+// 環境変数 MONGODB_URI が設定されていないとエラーになるので注意
+if (process.env.MONGODB_URI) {
+  mongoose.connect(process.env.MONGODB_URI)
+    .then(() => console.log("Connected to MongoDB Atlas"))
+    .catch(err => console.error("MongoDB Connection Error:", err));
+} else {
+  console.warn("MONGODB_URI is not set. Cloud sync will not work.");
+}
+
+// --- ★ 追加: データモデル定義 ---
+const SettingSchema = new mongoose.Schema({
+  sync_key: { type: String, required: true, unique: true }, // 合言葉
+  data: { type: mongoose.Schema.Types.Mixed, required: true }, // 設定データ
+  updated_at: { type: Date, default: Date.now }
+});
+const Setting = mongoose.model('Setting', SettingSchema);
 
 // --- ミドルウェア ---
 app.use(express.json()); // JSONボディパーサー (APIで必要なら)
@@ -43,6 +62,45 @@ function getQueryParamNameForEngine(engineNickname) {
 }
 
 // --- APIエンドポイント ---
+
+// ★ 追加: 設定の保存 (Upload)
+app.post('/api/sync', async (req, res) => {
+  const { key, settings } = req.body;
+  if (!key || !settings) {
+    return res.status(400).json({ error: "Key and settings are required" });
+  }
+  try {
+    // 合言葉(key)で検索し、あれば更新、なければ作成 (upsert)
+    await Setting.findOneAndUpdate(
+      { sync_key: key },
+      { data: settings, updated_at: new Date() },
+      { upsert: true, new: true }
+    );
+    res.json({ success: true, message: "Saved to MongoDB" });
+  } catch (err) {
+    console.error("Save Error:", err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// ★ 追加: 設定の読み込み (Download)
+app.get('/api/sync', async (req, res) => {
+  const key = req.query.key;
+  if (!key) {
+    return res.status(400).json({ error: "Key is required" });
+  }
+  try {
+    const doc = await Setting.findOne({ sync_key: key });
+    if (doc) {
+      res.json({ success: true, settings: doc.data });
+    } else {
+      res.status(404).json({ error: "Settings not found" });
+    }
+  } catch (err) {
+    console.error("Load Error:", err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
 
 // サジェスト取得API (/suggest)
 app.get("/suggest", async (req, res) => {
