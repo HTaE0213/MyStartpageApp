@@ -253,7 +253,7 @@ const AppSettings = {
       if (
         !builtinEngines[nickname] ||
         JSON.stringify(this.values.engines[nickname]) !==
-          JSON.stringify(builtinEngines[nickname])
+        JSON.stringify(builtinEngines[nickname])
       ) {
         // この条件で、追加されたカスタムエンジンと、内容が変更されたビルトインエンジンが対象となる
         customEnginesToSave[nickname] = this.values.engines[nickname];
@@ -2003,11 +2003,11 @@ function applySuggestionToBox(suggestion) {
   const engineToUse = state.actualEngine;
   // ★ 変更: 末尾に半角スペースを追加して、次の単語を入力しやすくする
   const newValue = `${engineToUse} ${suggestion} `;
-  
+
   // ★ 修正: IME未確定入力がある状態で値を書き換えると、未確定部分が残ることがあるため、
   // 先にフォーカスを外してIMEを確定させる。
   if (document.activeElement === elements.searchInput) {
-      elements.searchInput.blur();
+    elements.searchInput.blur();
   }
 
   console.log(
@@ -2052,14 +2052,14 @@ function executeSearchWithSuggestion(suggestion) {
   );
   if (searchUrl) {
     console.log(`Navigating to: ${searchUrl}`); // デバッグ用ログ
-    
+
     // ★★★ Rainsee等でのキャッシュ対策：遷移直前に入力をクリア ★★★
     // これにより、ブラウザバックやホームページに戻った際に入力欄がリセットされた状態になります
     elements.searchInput.value = "";
     updateClearButtonVisibility();
     updateActionButtonState();
     elements.suggestionsContainer.style.display = "none";
-    
+
     window.location.href = searchUrl;
   } else {
     console.error(
@@ -2094,7 +2094,7 @@ function executeSearch() {
     try {
       // ★ 念のため、URLとして有効か最終チェック (無効なら検索にフォールバック)
       new URL(urlToNavigate); // これがエラーを投げなければ有効な形式
-      
+
       // ★★★ 遷移前にクリア (URL遷移の場合もリセットしておく) ★★★
       elements.searchInput.value = "";
       updateClearButtonVisibility();
@@ -2168,7 +2168,7 @@ function executeSearch() {
   // --- 生成された検索URLへ遷移 ---
   if (searchUrl) {
     console.log("[executeSearch] Navigating to search URL:", searchUrl);
-    
+
     // ★★★ Rainsee等でのキャッシュ対策：遷移直前に入力をクリア ★★★
     elements.searchInput.value = "";
     state.lastQuery = ""; // 状態もリセット
@@ -2290,15 +2290,15 @@ async function processClipboard() {
   console.log("[processClipboard] Attempting to read clipboard...");
 
   // --- 1. Secure Context & Protocol Check ---
-  const isSecure = window.isSecureContext || 
-                   location.protocol === 'https:' || 
-                   location.hostname === 'localhost' || 
-                   location.hostname === '127.0.0.1';
+  const isSecure = window.isSecureContext ||
+    location.protocol === 'https:' ||
+    location.hostname === 'localhost' ||
+    location.hostname === '127.0.0.1';
 
   // エラー時の共通処理関数
   const handleClipboardFailure = (reason, showAlert = true) => {
     console.warn(`[processClipboard] Failed: ${reason}`);
-    
+
     // ★ 改善: エラー時は即座に検索ボックスにフォーカスを移動し、手動ペーストを促す
     if (elements.searchInput) {
       elements.searchInput.focus();
@@ -2366,7 +2366,7 @@ async function processClipboard() {
         url = "https://" + trimmedText;
       }
       console.log("[processClipboard] Navigating to URL:", url);
-      
+
       prepareForNavigation();
       window.location.href = url;
     } else {
@@ -2379,7 +2379,7 @@ async function processClipboard() {
 
       if (engine) {
         const searchUrl = engine.url.replace(/%s/g, encodeURIComponent(trimmedText));
-        
+
         prepareForNavigation();
         window.location.href = searchUrl;
       } else {
@@ -2396,7 +2396,7 @@ async function processClipboard() {
       err.message,
       err
     );
-    
+
     // エラーの種類に関わらず、まずは手動入力を促す処理へ回す
     handleClipboardFailure(`Exception: ${err.name}`, true);
   }
@@ -3777,16 +3777,108 @@ function getDomainFromUrl(url) {
   }
 }
 
+// 保存対象のキーリスト
+const SYNC_KEYS = [
+  'customSearchEngines_v2',
+  'deletedBuiltinEngines_v2',
+  'speedDialData_v2',
+  'speedDialColumns',
+  'faviconsCache_v2',
+  'startpageTheme',
+  'startpageBackground',
+  'defaultSearchEngine',
+  'defaultSuggestEngine'
+];
+
+// 保存ボタンの処理
+const uploadBtn = document.getElementById('uploadBtn');
+if (uploadBtn) {
+  uploadBtn.addEventListener('click', async () => {
+    const key = document.getElementById('syncKeyInput').value.trim();
+    if (!key) return alert("合言葉を入力してください");
+
+    if (!confirm("現在の設定をクラウドに保存しますか？(上書きされます)")) return;
+
+    // localStorageからデータを収集
+    const settings = {};
+    SYNC_KEYS.forEach(k => {
+      const val = localStorage.getItem(k);
+      if (val) settings[k] = val;
+    });
+
+    try {
+      uploadBtn.disabled = true;
+      uploadBtn.textContent = "保存中...";
+
+      const res = await fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, settings })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert("保存しました！");
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (e) {
+      alert("エラー: " + e.message);
+    } finally {
+      uploadBtn.disabled = false;
+      uploadBtn.innerHTML = '<i data-feather="upload-cloud"></i> 保存';
+      feather.replace();
+    }
+  });
+}
+
+// 復元ボタンの処理
+const downloadBtn = document.getElementById('downloadBtn');
+if (downloadBtn) {
+  downloadBtn.addEventListener('click', async () => {
+    const key = document.getElementById('syncKeyInput').value.trim();
+    if (!key) return alert("合言葉を入力してください");
+
+    if (!confirm("クラウドから設定を読み込みますか？(現在の端末の設定は上書きされます)")) return;
+
+    try {
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = "取得中...";
+
+      const res = await fetch(`/api/sync?key=${encodeURIComponent(key)}`);
+      const data = await res.json();
+
+      if (data.success && data.settings) {
+        // localStorageへ反映
+        Object.keys(data.settings).forEach(k => {
+          localStorage.setItem(k, data.settings[k]);
+        });
+
+        alert("復元しました。ページをリロードします。");
+        location.reload();
+      } else {
+        alert("データが見つかりませんでした。合言葉を確認してください。");
+      }
+    } catch (e) {
+      alert("エラー: " + e.message);
+    } finally {
+      downloadBtn.disabled = false;
+      downloadBtn.innerHTML = '<i data-feather="download-cloud"></i> 復元';
+      feather.replace();
+    }
+  });
+}
+
 // --- Initialize Application ---
 init();
 
 // --- Rainsee Browser Adaptation ---
 // Rainsee Browserのホームページ没入効果に対応するための関数
 // ブラウザがページをロードする際に window.rainseeHomeEvent(top, bottom) を呼び出します
-window.rainseeHomeEvent = function(top, bottom) {
+window.rainseeHomeEvent = function (top, bottom) {
   // top: ステータスバー等の上部領域の高さ
   // bottom: ナビゲーションバー等の下部領域の高さ
-  
+
   // 1. 既存の左右のpadding設定を維持するため、paddingTopとpaddingBottomのみを設定します
   if (document.body) {
     document.body.style.paddingTop = `${top}px`;
@@ -3794,7 +3886,7 @@ window.rainseeHomeEvent = function(top, bottom) {
   }
 
   // 2. 固定配置ボタンの位置調整 (Rainseeのナビゲーションバーとの重なり、およびボタン同士の重なりを防ぐ)
-  
+
   // モバイル用検索フォーカスボタン (通常右下にあると想定)
   if (elements.mobileSearchFocusButton) {
     // 下部のセーフエリア(bottom) + 余白(20px)
