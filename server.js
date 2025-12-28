@@ -28,7 +28,9 @@ const SettingSchema = new mongoose.Schema({
 const Setting = mongoose.model('Setting', SettingSchema);
 
 // --- ミドルウェア ---
-app.use(express.json()); // JSONボディパーサー (APIで必要なら)
+// データ制限を10MBに拡張 (画像データなどが含まれるため)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // --- 静的ファイルの配信 ---
 // publicフォルダの中身をルートURL ('/') からアクセスできるようにする
