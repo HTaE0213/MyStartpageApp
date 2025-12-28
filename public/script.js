@@ -96,6 +96,7 @@ const AppSettings = {
     // ★★★ デフォルトエンジン用のキーを追加 ★★★
     DEFAULT_SEARCH_ENGINE: "defaultSearchEngine",
     DEFAULT_SUGGEST_ENGINE: "defaultSuggestEngine",
+    SHOW_LABELS: 'speedDialShowLabels',
     // 他に必要な設定キーがあれば追加
   },
   // アプリケーションのメモリ上に保持する設定値
@@ -931,7 +932,40 @@ function init() {
         );
       }
     }, 100);
+
+    // ★ 追加: ラベル表示設定の読み込みと適用
+    const showLabelsCheckbox = document.getElementById('showSpeedDialLabelsCheckbox');
+    const speedDialGrid = document.getElementById('speedDialGrid');
+
+    // 保存された設定を取得 (デフォルトは true = 'true' または null)
+    const savedShowLabels = localStorage.getItem(AppSettings.KEYS.SHOW_LABELS);
+    const isShowLabels = savedShowLabels === null ? true : savedShowLabels === 'true';
+
+    // チェックボックスと表示状態に反映
+    if (showLabelsCheckbox) {
+      showLabelsCheckbox.checked = isShowLabels;
+      showLabelsCheckbox.addEventListener('change', (e) => {
+        const isChecked = e.target.checked;
+        localStorage.setItem(AppSettings.KEYS.SHOW_LABELS, isChecked);
+        updateSpeedDialLabels(isChecked);
+      });
+    }
+
+    // 初回描画時のクラス適用
+    updateSpeedDialLabels(isShowLabels);
   });
+}
+
+// ★ 追加: ラベル表示・非表示を切り替える関数
+function updateSpeedDialLabels(show) {
+  const grid = document.getElementById('speedDialGrid');
+  if (!grid) return;
+
+  if (show) {
+    grid.classList.remove('hide-labels');
+  } else {
+    grid.classList.add('hide-labels');
+  }
 }
 
 // --- Date Time Display ---
@@ -3787,7 +3821,8 @@ const SYNC_KEYS = [
   'startpageTheme',
   'startpageBackground',
   'defaultSearchEngine',
-  'defaultSuggestEngine'
+  'defaultSuggestEngine',
+  'speedDialShowLabels',
 ];
 
 // 保存ボタンの処理
