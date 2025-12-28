@@ -36,20 +36,12 @@ body {
   /* ★ 読みやすい日本語ゴシックとして游ゴシックを優先し、フォールバックを指定 */
   font-family: "游ゴシック体", YuGothic, "游ゴシック Medium", "Yu Gothic Medium",
     "游ゴシック", "Yu Gothic", "メイリオ", Meiryo,
-    /* Windows向けフォールバック */
-    "ヒラギノ角ゴ ProN W3",
+    /* Windows向けフォールバック */ "ヒラギノ角ゴ ProN W3",
     "Hiragino Kaku Gothic ProN",
-    /* macOS向けフォールバック */
-    "ヒラギノ角ゴ Pro W3",
-    "Hiragino Kaku Gothic Pro",
-    /* macOS向けフォールバック */
-    Roboto,
-    /* Android向け */
-    "Helvetica Neue",
-    /* iOS向け */
-    Arial,
-    /* 欧文フォールバック */
-    sans-serif;
+    /* macOS向けフォールバック */ "ヒラギノ角ゴ Pro W3",
+    "Hiragino Kaku Gothic Pro", /* macOS向けフォールバック */ Roboto,
+    /* Android向け */ "Helvetica Neue", /* iOS向け */ Arial,
+    /* 欧文フォールバック */ sans-serif;
   /* 最終的な汎用サンセリフ */
   background-color: var(--bg-color);
   color: var(--text-color);
@@ -1146,7 +1138,6 @@ body.edit-mode .speed-dial-item-buttons {
 }
 
 @media (prefers-color-scheme: dark) {
-
   .current-engine-display:hover,
   .current-engine-display:focus {
     background-color: #3d3d3d;
@@ -1600,25 +1591,20 @@ body.edit-mode .speed-dial-item-buttons {
     /* 必要に応じて調整 */
     padding-top: env(safe-area-inset-top, 0px);
   }
+}
 
-  /* ラベル非表示時のスタイル */
-  .speed-dial-grid.hide-labels .speed-dial-item {
-    /* ラベルがない分、少し高さを減らす調整などが必要ならここに記述 */
-  }
+/* ★ スピードダイアルのラベル非表示時のスタイル */
+.speed-dial-grid.hide-labels .speed-dial-item {
+  padding-bottom: 10px; /* アイコンのみの場合のバランス調整 */
+}
 
-  .speed-dial-grid.hide-labels .speed-dial-label {
-    display: none;
-    /* ラベルを消す */
-  }
+.speed-dial-grid.hide-labels .speed-dial-item span {
+  display: none; /* ラベルを非表示 */
+}
 
-  /* (オプション) デザインの微調整: アイコンを少し大きく目立たせるなど */
-  .speed-dial-grid.hide-labels .speed-dial-icon {
-    width: 48px;
-    /* 必要に応じて調整 */
-    height: 48px;
-    /* 必要に応じて調整 */
-    margin-bottom: 0;
-    /* ラベルがないので下マージンを消す */
-  }
-
+.speed-dial-grid.hide-labels .speed-dial-item img,
+.speed-dial-grid.hide-labels .speed-dial-item .initial-icon {
+  margin-bottom: 0; /* ラベルがないので下のマージンを削除 */
+  width: 48px; /* アイコンを少し大きくする */
+  height: 48px;
 }

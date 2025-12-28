@@ -93,10 +93,10 @@ const AppSettings = {
     CURRENT_ENGINE: "currentSearchEngine", // 現在のエンジン
     THEME: "startpageTheme", // テーマ設定 (例)
     BACKGROUND: "startpageBackground", // 背景設定 (例)
+    SHOW_LABELS: "speedDialShowLabels", // ★ 追加: ラベル表示設定キー
     // ★★★ デフォルトエンジン用のキーを追加 ★★★
     DEFAULT_SEARCH_ENGINE: "defaultSearchEngine",
     DEFAULT_SUGGEST_ENGINE: "defaultSuggestEngine",
-    SHOW_LABELS: 'speedDialShowLabels',
     // 他に必要な設定キーがあれば追加
   },
   // アプリケーションのメモリ上に保持する設定値
@@ -254,7 +254,7 @@ const AppSettings = {
       if (
         !builtinEngines[nickname] ||
         JSON.stringify(this.values.engines[nickname]) !==
-        JSON.stringify(builtinEngines[nickname])
+          JSON.stringify(builtinEngines[nickname])
       ) {
         // この条件で、追加されたカスタムエンジンと、内容が変更されたビルトインエンジンが対象となる
         customEnginesToSave[nickname] = this.values.engines[nickname];
@@ -888,6 +888,25 @@ function init() {
     elements.columnsInput.value = AppSettings.values.columns;
     speedDialData = AppSettings.values.speedDial;
 
+    // ★ 追加: ラベル表示設定の読み込みと適用
+    const showLabelsCheckbox = document.getElementById(
+      "showSpeedDialLabelsCheckbox"
+    );
+    const savedShowLabels = localStorage.getItem(AppSettings.KEYS.SHOW_LABELS);
+    // デフォルトは true (nullの場合もtrue)
+    const isShowLabels =
+      savedShowLabels === null ? true : savedShowLabels === "true";
+
+    if (showLabelsCheckbox) {
+      showLabelsCheckbox.checked = isShowLabels;
+      showLabelsCheckbox.addEventListener("change", (e) => {
+        const isChecked = e.target.checked;
+        localStorage.setItem(AppSettings.KEYS.SHOW_LABELS, isChecked);
+        updateSpeedDialLabels(isChecked);
+      });
+    }
+    updateSpeedDialLabels(isShowLabels); // 初期適用
+
     setupEventListeners();
     renderEngineList();
     initHelpContent();
@@ -932,40 +951,7 @@ function init() {
         );
       }
     }, 100);
-
-    // ★ 追加: ラベル表示設定の読み込みと適用
-    const showLabelsCheckbox = document.getElementById('showSpeedDialLabelsCheckbox');
-    const speedDialGrid = document.getElementById('speedDialGrid');
-
-    // 保存された設定を取得 (デフォルトは true = 'true' または null)
-    const savedShowLabels = localStorage.getItem(AppSettings.KEYS.SHOW_LABELS);
-    const isShowLabels = savedShowLabels === null ? true : savedShowLabels === 'true';
-
-    // チェックボックスと表示状態に反映
-    if (showLabelsCheckbox) {
-      showLabelsCheckbox.checked = isShowLabels;
-      showLabelsCheckbox.addEventListener('change', (e) => {
-        const isChecked = e.target.checked;
-        localStorage.setItem(AppSettings.KEYS.SHOW_LABELS, isChecked);
-        updateSpeedDialLabels(isChecked);
-      });
-    }
-
-    // 初回描画時のクラス適用
-    updateSpeedDialLabels(isShowLabels);
   });
-}
-
-// ★ 追加: ラベル表示・非表示を切り替える関数
-function updateSpeedDialLabels(show) {
-  const grid = document.getElementById('speedDialGrid');
-  if (!grid) return;
-
-  if (show) {
-    grid.classList.remove('hide-labels');
-  } else {
-    grid.classList.add('hide-labels');
-  }
 }
 
 // --- Date Time Display ---
@@ -1138,10 +1124,13 @@ function setupEventListeners() {
           fetchFaviconFromUrl(url),
         ]);
 
-        console.log("https://www.youtube.com/channel/UCLdfTpBoh9G_DI3OURnIFOQ Fetch results:", {
-          fetchedTitle,
-          hasFavicon: !!fetchedFaviconDataUrl,
-        });
+        console.log(
+          "https://www.youtube.com/channel/UCLdfTpBoh9G_DI3OURnIFOQ Fetch results:",
+          {
+            fetchedTitle,
+            hasFavicon: !!fetchedFaviconDataUrl,
+          }
+        );
 
         // --- 結果を反映 (ユーザー入力がない場合) ---
         // サイト名
@@ -1164,7 +1153,10 @@ function setupEventListeners() {
         );
       } catch (error) {
         // Promise.all でエラーが発生した場合 (通常は各fetch関数内で処理されるはず)
-        console.error("https://www.youtube.com/channel/UCLdfTpBoh9G_DI3OURnIFOQ Error during parallel fetch:", error);
+        console.error(
+          "https://www.youtube.com/channel/UCLdfTpBoh9G_DI3OURnIFOQ Error during parallel fetch:",
+          error
+        );
         // エラー時も最終的なプレビューは更新しておく
         updateFaviconPreview(
           state.manualIconDataUrl,
@@ -1175,7 +1167,9 @@ function setupEventListeners() {
         setModalLoadingState(false); // ★ ローディング状態を解除
       }
     } else {
-      console.log("https://www.youtube.com/channel/UCLdfTpBoh9G_DI3OURnIFOQ URL is invalid or empty.");
+      console.log(
+        "https://www.youtube.com/channel/UCLdfTpBoh9G_DI3OURnIFOQ URL is invalid or empty."
+      );
       // URLが無効な場合、取得済みアイコンがあればクリアするなどの処理が必要か検討
       if (!state.manualIconDataUrl) {
         // 手動アイコンがなければ
@@ -2324,10 +2318,11 @@ async function processClipboard() {
   console.log("[processClipboard] Attempting to read clipboard...");
 
   // --- 1. Secure Context & Protocol Check ---
-  const isSecure = window.isSecureContext ||
-    location.protocol === 'https:' ||
-    location.hostname === 'localhost' ||
-    location.hostname === '127.0.0.1';
+  const isSecure =
+    window.isSecureContext ||
+    location.protocol === "https:" ||
+    location.hostname === "localhost" ||
+    location.hostname === "127.0.0.1";
 
   // エラー時の共通処理関数
   const handleClipboardFailure = (reason, showAlert = true) => {
@@ -2342,7 +2337,9 @@ async function processClipboard() {
 
     if (showAlert) {
       // メッセージを「権限エラー」ではなく「自動読み取り不可」というニュアンスに変更
-      alert("ブラウザの制限によりクリップボードを自動で読み取れませんでした。\n検索ボックスにフォーカスしましたので、長押しして貼り付けてください。");
+      alert(
+        "ブラウザの制限によりクリップボードを自動で読み取れませんでした。\n検索ボックスにフォーカスしましたので、長押しして貼り付けてください。"
+      );
     }
   };
 
@@ -2412,7 +2409,10 @@ async function processClipboard() {
       const engine = AppSettings.values.engines[defaultEngineNickname];
 
       if (engine) {
-        const searchUrl = engine.url.replace(/%s/g, encodeURIComponent(trimmedText));
+        const searchUrl = engine.url.replace(
+          /%s/g,
+          encodeURIComponent(trimmedText)
+        );
 
         prepareForNavigation();
         window.location.href = searchUrl;
@@ -3813,30 +3813,31 @@ function getDomainFromUrl(url) {
 
 // 保存対象のキーリスト
 const SYNC_KEYS = [
-  'customSearchEngines_v2',
-  'deletedBuiltinEngines_v2',
-  'speedDialData_v2',
-  'speedDialColumns',
-  'faviconsCache_v2',
-  'startpageTheme',
-  'startpageBackground',
-  'defaultSearchEngine',
-  'defaultSuggestEngine',
-  'speedDialShowLabels',
+  "customSearchEngines_v2",
+  "deletedBuiltinEngines_v2",
+  "speedDialData_v2",
+  "speedDialColumns",
+  "faviconsCache_v2",
+  "startpageTheme",
+  "startpageBackground",
+  "defaultSearchEngine",
+  "defaultSuggestEngine",
+  "speedDialShowLabels",
 ];
 
 // 保存ボタンの処理
-const uploadBtn = document.getElementById('uploadBtn');
+const uploadBtn = document.getElementById("uploadBtn");
 if (uploadBtn) {
-  uploadBtn.addEventListener('click', async () => {
-    const key = document.getElementById('syncKeyInput').value.trim();
+  uploadBtn.addEventListener("click", async () => {
+    const key = document.getElementById("syncKeyInput").value.trim();
     if (!key) return alert("合言葉を入力してください");
 
-    if (!confirm("現在の設定をクラウドに保存しますか？(上書きされます)")) return;
+    if (!confirm("現在の設定をクラウドに保存しますか？(上書きされます)"))
+      return;
 
     // localStorageからデータを収集
     const settings = {};
-    SYNC_KEYS.forEach(k => {
+    SYNC_KEYS.forEach((k) => {
       const val = localStorage.getItem(k);
       if (val) settings[k] = val;
     });
@@ -3845,10 +3846,10 @@ if (uploadBtn) {
       uploadBtn.disabled = true;
       uploadBtn.textContent = "保存中...";
 
-      const res = await fetch('/api/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, settings })
+      const res = await fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, settings }),
       });
 
       const data = await res.json();
@@ -3868,13 +3869,18 @@ if (uploadBtn) {
 }
 
 // 復元ボタンの処理
-const downloadBtn = document.getElementById('downloadBtn');
+const downloadBtn = document.getElementById("downloadBtn");
 if (downloadBtn) {
-  downloadBtn.addEventListener('click', async () => {
-    const key = document.getElementById('syncKeyInput').value.trim();
+  downloadBtn.addEventListener("click", async () => {
+    const key = document.getElementById("syncKeyInput").value.trim();
     if (!key) return alert("合言葉を入力してください");
 
-    if (!confirm("クラウドから設定を読み込みますか？(現在の端末の設定は上書きされます)")) return;
+    if (
+      !confirm(
+        "クラウドから設定を読み込みますか？(現在の端末の設定は上書きされます)"
+      )
+    )
+      return;
 
     try {
       downloadBtn.disabled = true;
@@ -3885,7 +3891,7 @@ if (downloadBtn) {
 
       if (data.success && data.settings) {
         // localStorageへ反映
-        Object.keys(data.settings).forEach(k => {
+        Object.keys(data.settings).forEach((k) => {
           localStorage.setItem(k, data.settings[k]);
         });
 
@@ -3952,3 +3958,15 @@ window.rainseeHomeEvent = function (top, bottom) {
   addBottomFrostedDiv(bottom);
   */
 };
+
+// ★ 追加: スピードダイアルのラベル表示・非表示を切り替える関数
+function updateSpeedDialLabels(show) {
+  const grid = document.getElementById("speedDialGrid");
+  if (!grid) return;
+
+  if (show) {
+    grid.classList.remove("hide-labels");
+  } else {
+    grid.classList.add("hide-labels");
+  }
+}
