@@ -36,12 +36,21 @@ body {
   /* ★ 読みやすい日本語ゴシックとして游ゴシックを優先し、フォールバックを指定 */
   font-family: "游ゴシック体", YuGothic, "游ゴシック Medium", "Yu Gothic Medium",
     "游ゴシック", "Yu Gothic", "メイリオ", Meiryo,
-    /* Windows向けフォールバック */ "ヒラギノ角ゴ ProN W3",
+    /* Windows向けフォールバック */
+    "ヒラギノ角ゴ ProN W3",
     "Hiragino Kaku Gothic ProN",
-    /* macOS向けフォールバック */ "ヒラギノ角ゴ Pro W3",
-    "Hiragino Kaku Gothic Pro", /* macOS向けフォールバック */ Roboto,
-    /* Android向け */ "Helvetica Neue", /* iOS向け */ Arial,
-    /* 欧文フォールバック */ sans-serif; /* 最終的な汎用サンセリフ */
+    /* macOS向けフォールバック */
+    "ヒラギノ角ゴ Pro W3",
+    "Hiragino Kaku Gothic Pro",
+    /* macOS向けフォールバック */
+    Roboto,
+    /* Android向け */
+    "Helvetica Neue",
+    /* iOS向け */
+    Arial,
+    /* 欧文フォールバック */
+    sans-serif;
+  /* 最終的な汎用サンセリフ */
   background-color: var(--bg-color);
   color: var(--text-color);
   display: flex;
@@ -88,7 +97,8 @@ body {
   position: relative;
   margin-bottom: 15px;
   /* ★ PC表示時の最大幅を設定 */
-  max-width: 650px; /* 例: 700px (お好みで調整してください) */
+  max-width: 650px;
+  /* 例: 700px (お好みで調整してください) */
   /* ★ フォーム自体を中央揃えにする */
   margin-left: auto;
   margin-right: auto;
@@ -142,9 +152,12 @@ body {
   touch-action: manipulation;
   /* ★ テキスト選択を無効化 */
   user-select: none;
-  -webkit-user-select: none; /* Safari/iOS用 */
-  -moz-user-select: none; /* Firefox用 */
-  -ms-user-select: none; /* IE/Edge用 */
+  -webkit-user-select: none;
+  /* Safari/iOS用 */
+  -moz-user-select: none;
+  /* Firefox用 */
+  -ms-user-select: none;
+  /* IE/Edge用 */
 }
 
 .current-engine-display:hover,
@@ -249,7 +262,8 @@ body {
   flex-grow: 1;
   /* padding: 10px 12px 10px 12px; を修正 */
   /* ★ 右パディングをボタン群の幅 + α (111px + α) に設定 */
-  padding: 10px 120px 10px 12px; /* 上 右 下 左 (右パディングを120pxに) */
+  padding: 10px 120px 10px 12px;
+  /* 上 右 下 左 (右パディングを120pxに) */
   font-size: 16px;
   border: none;
   outline: none;
@@ -417,21 +431,29 @@ body {
 }
 
 .suggestion-item {
-  padding: 8px 44px 8px 12px; /* ★ 右パディングをボタン幅(40px) + α(4px)に設定 */
+  padding: 8px 44px 8px 12px;
+  /* ★ 右パディングをボタン幅(40px) + α(4px)に設定 */
   cursor: pointer;
   display: flex;
   align-items: center;
   /* justify-content: space-between; は不要になる */
-  position: relative; /* ★ ボタンの絶対配置の基準点 */
-  min-height: 40px; /* ★ ボタンの高さと合わせるための最小高さ (要調整) */
-  border-bottom: 1px solid var(--border-color); /* 元のスタイル */
-  transition: background-color 0.2s ease; /* 元のスタイル */
-  user-select: none; /* 元のスタイル */
+  position: relative;
+  /* ★ ボタンの絶対配置の基準点 */
+  min-height: 40px;
+  /* ★ ボタンの高さと合わせるための最小高さ (要調整) */
+  border-bottom: 1px solid var(--border-color);
+  /* 元のスタイル */
+  transition: background-color 0.2s ease;
+  /* 元のスタイル */
+  user-select: none;
+  /* 元のスタイル */
 }
+
 .suggestion-item:last-child {
   /* 元のスタイル */
   border-bottom: none;
 }
+
 .suggestion-item:hover,
 .suggestion-item.selected {
   /* 元のスタイル */
@@ -455,35 +477,50 @@ body {
 }
 
 .arrow-button {
-  position: absolute; /* ★ 絶対配置に変更 */
+  position: absolute;
+  /* ★ 絶対配置に変更 */
   top: 0;
   right: 0;
-  bottom: 0; /* ★ 上下いっぱいに広げる */
-  width: 40px; /* ★ ボタンの幅を指定 (高さに近づける、要調整) */
-  height: 100%; /* ★ 高さを親要素いっぱいに */
-  background: none; /* 背景なし */
-  border: none; /* 枠線なし */
-  color: var(--text-secondary); /* 通常時の色 */
+  bottom: 0;
+  /* ★ 上下いっぱいに広げる */
+  width: 40px;
+  /* ★ ボタンの幅を指定 (高さに近づける、要調整) */
+  height: 100%;
+  /* ★ 高さを親要素いっぱいに */
+  background: none;
+  /* 背景なし */
+  border: none;
+  /* 枠線なし */
+  color: var(--text-secondary);
+  /* 通常時の色 */
   cursor: pointer;
-  display: flex; /* アイコン中央揃えのため */
+  display: flex;
+  /* アイコン中央揃えのため */
   align-items: center;
   justify-content: center;
-  padding: 0; /* パディングは不要 */
-  margin: 0; /* マージンも不要 */
-  border-radius: 0 6px 6px 0; /* ★ 右側の角だけ丸める (親要素の角丸に合わせる) */
+  padding: 0;
+  /* パディングは不要 */
+  margin: 0;
+  /* マージンも不要 */
+  border-radius: 0 6px 6px 0;
+  /* ★ 右側の角だけ丸める (親要素の角丸に合わせる) */
   transition: background-color 0.2s, color 0.2s;
 }
 
 .arrow-button:hover,
 .arrow-button:focus {
-  background-color: var(--highlight-color); /* ホバー背景色 */
-  color: var(--primary-dark); /* ホバー時の色 */
+  background-color: var(--highlight-color);
+  /* ホバー背景色 */
+  color: var(--primary-dark);
+  /* ホバー時の色 */
   outline: none;
 }
 
 .arrow-button svg {
-  width: var(--icon-size-medium); /* 18px (少し大きくしても良いかも) */
-  height: var(--icon-size-medium); /* 18px */
+  width: var(--icon-size-medium);
+  /* 18px (少し大きくしても良いかも) */
+  height: var(--icon-size-medium);
+  /* 18px */
 }
 
 .speed-dial-container {
@@ -924,7 +961,8 @@ body.edit-mode .speed-dial-item-buttons {
 .default-engine-settings {
   display: flex;
   align-items: center;
-  gap: 5px; /* ★ gap を少し狭く */
+  gap: 5px;
+  /* ★ gap を少し狭く */
   padding: 6px 12px;
 }
 
@@ -932,8 +970,10 @@ body.edit-mode .speed-dial-item-buttons {
   font-size: 0.9em;
   color: var(--text-secondary);
   flex-shrink: 0;
-  width: 100px; /* ★ ラベル幅を狭く (例: 100px) */
-  white-space: nowrap; /* ★ ラベルが折り返さないように */
+  width: 100px;
+  /* ★ ラベル幅を狭く (例: 100px) */
+  white-space: nowrap;
+  /* ★ ラベルが折り返さないように */
 }
 
 .panel-select {
@@ -945,68 +985,83 @@ body.edit-mode .speed-dial-item-buttons {
   color: var(--text-color);
   font-size: 0.9em;
   cursor: pointer;
-  min-width: 80px; /* ★ select の最小幅を設定 (例: 80px) */
-  overflow: hidden; /* ★ はみ出すテキストを隠す */
-  text-overflow: ellipsis; /* ★ はみ出す場合は ... で表示 */
-  white-space: nowrap; /* ★ オプション内容が折り返さないように */
+  min-width: 80px;
+  /* ★ select の最小幅を設定 (例: 80px) */
+  overflow: hidden;
+  /* ★ はみ出すテキストを隠す */
+  text-overflow: ellipsis;
+  /* ★ はみ出す場合は ... で表示 */
+  white-space: nowrap;
+  /* ★ オプション内容が折り返さないように */
 }
 
 /* エンジン管理モーダル内のデフォルト設定 */
 .modal-content .default-engine-settings {
   /* display: flex; を削除して縦並びにする場合 */
-  margin-bottom: 15px; /* 他のフォーム要素との間隔 */
+  margin-bottom: 15px;
+  /* 他のフォーム要素との間隔 */
 }
 
 .modal-content .default-engine-settings label {
-  display: block; /* ラベルをブロック要素に */
-  margin-bottom: 5px; /* selectとの間隔 */
+  display: block;
+  /* ラベルをブロック要素に */
+  margin-bottom: 5px;
+  /* selectとの間隔 */
   font-weight: bold;
   font-size: 0.9em;
-  width: auto; /* 幅指定解除 */
+  width: auto;
+  /* 幅指定解除 */
 }
 
 .modal-content .panel-select {
   /* クラス名は panel-select のまま使う */
-  width: 100%; /* 幅を100%に */
-  padding: 8px; /* 他のinputと合わせる */
+  width: 100%;
+  /* 幅を100%に */
+  padding: 8px;
+  /* 他のinputと合わせる */
   border: 1px solid var(--border-color);
   border-radius: 4px;
   background-color: var(--container-bg);
   color: var(--text-color);
-  font-size: 1em; /* 他のinputと合わせる */
+  font-size: 1em;
+  /* 他のinputと合わせる */
   cursor: pointer;
 }
 
 /* --- モバイル用フォーカスボタン --- */
 #mobileSearchFocusButton {
-  display: none; /* デフォルト非表示 */
+  display: none;
+  /* デフォルト非表示 */
   position: fixed;
   /* bottom: 20px; を変更 */
-  bottom: 30px; /* ★ 下からの距離を少し増やす (例: 30px) */
+  bottom: 30px;
+  /* ★ 下からの距離を少し増やす (例: 30px) */
   left: 50%;
   transform: translateX(-50%);
   width: 56px;
   height: 56px;
   /* background-color: var(--accent-color); を修正 (変数が未定義のため) */
-  background-color: var(
-    --primary-color
-  ); /* ★ primary-colorを使用 (または適切な色を指定) */
+  background-color: var(--primary-color);
+  /* ★ primary-colorを使用 (または適切な色を指定) */
   color: #fff;
   border: none;
   border-radius: 50%;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  z-index: 1050; /* 他の要素より手前に */
+  z-index: 1050;
+  /* 他の要素より手前に */
   cursor: pointer;
   align-items: center;
   justify-content: center;
   transition: transform 0.2s ease-out;
   /* ★ ダブルタップズームなどの干渉を防ぐ */
   touch-action: manipulation;
-  bottom: calc(30px + env(safe-area-inset-bottom, 0px)); /* ★ セーフエリア分を考慮 */
+  bottom: calc(30px + env(safe-area-inset-bottom, 0px));
+  /* ★ セーフエリア分を考慮 */
 }
 
 #mobileSearchFocusButton:active {
-  transform: scale(0.95); /* クリック時の視覚フィードバック */
+  transform: scale(0.95);
+  /* クリック時の視覚フィードバック */
 }
 
 #mobileSearchFocusButton i {
@@ -1016,40 +1071,56 @@ body.edit-mode .speed-dial-item-buttons {
 
 /* --- 入力欄とインラインボタンのコンテナ --- */
 .input-with-button {
-  display: flex; /* 要素を横並びにする */
-  align-items: center; /* 要素を垂直方向中央揃え */
-  gap: 5px; /* 入力欄とボタンの間隔 */
-  margin-bottom: 15px; /* ★ 元々 input にあった下のマージンをコンテナに移動 */
+  display: flex;
+  /* 要素を横並びにする */
+  align-items: center;
+  /* 要素を垂直方向中央揃え */
+  gap: 5px;
+  /* 入力欄とボタンの間隔 */
+  margin-bottom: 15px;
+  /* ★ 元々 input にあった下のマージンをコンテナに移動 */
 }
 
 .input-with-button input[type="text"] {
-  flex-grow: 1; /* 入力欄が残りのスペースを埋めるように */
-  margin-bottom: 0; /* ★ input 自体の下のマージンを解除 */
+  flex-grow: 1;
+  /* 入力欄が残りのスペースを埋めるように */
+  margin-bottom: 0;
+  /* ★ input 自体の下のマージンを解除 */
 }
 
 /* --- タイトル取得ボタンのスタイル --- */
 .inline-fetch-button {
-  padding: 6px 8px; /* ボタン内の余白 */
-  background-color: transparent; /* 背景透明 */
-  border: 1px solid var(--border-color); /* 枠線 */
-  border-radius: 4px; /* 角丸 */
+  padding: 6px 8px;
+  /* ボタン内の余白 */
+  background-color: transparent;
+  /* 背景透明 */
+  border: 1px solid var(--border-color);
+  /* 枠線 */
+  border-radius: 4px;
+  /* 角丸 */
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0; /* 縮まないように */
-  color: var(--text-secondary); /* アイコンの色 */
+  flex-shrink: 0;
+  /* 縮まないように */
+  color: var(--text-secondary);
+  /* アイコンの色 */
   transition: var(--transition);
 }
 
 .inline-fetch-button:hover {
-  background-color: var(--highlight-color); /* ホバー時背景 */
-  border-color: var(--primary-color); /* ホバー時枠線 */
-  color: var(--text-color); /* ホバー時アイコン色 */
+  background-color: var(--highlight-color);
+  /* ホバー時背景 */
+  border-color: var(--primary-color);
+  /* ホバー時枠線 */
+  color: var(--text-color);
+  /* ホバー時アイコン色 */
 }
 
 .inline-fetch-button svg {
-  width: 14px; /* アイコンサイズ */
+  width: 14px;
+  /* アイコンサイズ */
   height: 14px;
 }
 
@@ -1057,19 +1128,25 @@ body.edit-mode .speed-dial-item-buttons {
 .inline-fetch-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  background-color: transparent; /* 無効時も背景は透明のまま */
+  background-color: transparent;
+  /* 無効時も背景は透明のまま */
 }
 
 /* ボタン内にスピナーを表示する場合のスタイル */
 .inline-fetch-button .spinner {
-  width: 14px; /* ボタン内のアイコンサイズに合わせる */
+  width: 14px;
+  /* ボタン内のアイコンサイズに合わせる */
   height: 14px;
-  border-width: 2px; /* スピナー線の太さ */
-  border-left-color: var(--primary-color); /* スピナーの色 */
-  margin: 0; /* マージン解除 */
+  border-width: 2px;
+  /* スピナー線の太さ */
+  border-left-color: var(--primary-color);
+  /* スピナーの色 */
+  margin: 0;
+  /* マージン解除 */
 }
 
 @media (prefers-color-scheme: dark) {
+
   .current-engine-display:hover,
   .current-engine-display:focus {
     background-color: #3d3d3d;
@@ -1126,6 +1203,7 @@ body.edit-mode .speed-dial-item-buttons {
     /* 元のスタイル */
     border-bottom-color: #444;
   }
+
   .suggestion-item:hover,
   .suggestion-item.selected {
     /* 元のスタイル */
@@ -1274,26 +1352,31 @@ body.edit-mode .speed-dial-item-buttons {
     color: #eee;
     border-color: #555;
   }
+
   /* 区切り線のスタイル (例) */
   .modal-divider {
     border: none;
     border-top: 1px solid var(--border-color);
     margin: 15px 0;
   }
+
   .arrow-button:hover,
   .arrow-button:focus {
-    background-color: #3d3d3d; /* ダークモードのハイライト色 */
+    background-color: #3d3d3d;
+    /* ダークモードのハイライト色 */
   }
 
   .inline-fetch-button {
     border-color: #555;
     color: var(--text-secondary);
   }
+
   .inline-fetch-button:hover {
     background-color: #444;
     border-color: var(--primary-color);
     color: #eee;
   }
+
   .inline-fetch-button .spinner {
     border-left-color: var(--primary-color);
   }
@@ -1383,7 +1466,8 @@ body.edit-mode .speed-dial-item-buttons {
     /* padding: 8px 110px 8px 10px; を修正 (モバイルボタン配置に合わせて調整) */
     /* モバイルのボタン配置: right: 70px (クリア) + width: 36px = 106px */
     /* ★ 右パディングを 110px 程度に確保 */
-    padding: 8px 110px 8px 10px; /* 上 右 下 左 (現状維持で良さそう) */
+    padding: 8px 110px 8px 10px;
+    /* 上 右 下 左 (現状維持で良さそう) */
     font-size: 14px;
   }
 
@@ -1498,7 +1582,8 @@ body.edit-mode .speed-dial-item-buttons {
   }
 
   #mobileSearchFocusButton {
-    display: flex; /* モバイルでは表示 */
+    display: flex;
+    /* モバイルでは表示 */
   }
 
   /* ★ ページ全体のコンテナやbodyに下部パディングを追加して、ボタンとコンテンツが重ならないようにする */
@@ -1506,12 +1591,34 @@ body.edit-mode .speed-dial-item-buttons {
   .container {
     /* 必要に応じて調整 */
     /* ボタンの高さ(56px) + 新しいオフセット(30px) + セーフエリア + ★ツールバー想定マージン(例: 20px) */
-        padding-bottom: calc(56px + 30px + env(safe-area-inset-bottom, 0px) + 20px);
+    padding-bottom: calc(56px + 30px + env(safe-area-inset-bottom, 0px) + 20px);
   }
+
   /* ★ 上部ノッチ対応 */
   body,
   .container {
     /* 必要に応じて調整 */
     padding-top: env(safe-area-inset-top, 0px);
   }
+
+  /* ラベル非表示時のスタイル */
+  .speed-dial-grid.hide-labels .speed-dial-item {
+    /* ラベルがない分、少し高さを減らす調整などが必要ならここに記述 */
+  }
+
+  .speed-dial-grid.hide-labels .speed-dial-label {
+    display: none;
+    /* ラベルを消す */
+  }
+
+  /* (オプション) デザインの微調整: アイコンを少し大きく目立たせるなど */
+  .speed-dial-grid.hide-labels .speed-dial-icon {
+    width: 48px;
+    /* 必要に応じて調整 */
+    height: 48px;
+    /* 必要に応じて調整 */
+    margin-bottom: 0;
+    /* ラベルがないので下マージンを消す */
+  }
+
 }
